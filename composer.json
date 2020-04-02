@@ -1,0 +1,12 @@
+{
+    "name": "daycry/twig",
+    "require": {
+      "php": ">=7.2",
+      "twig/twig": "~1.38"
+    },
+    "autoload": {
+        "psr-4": {
+            "Daycry\\Twig\\": "src/"
+        }
+    }
+}
