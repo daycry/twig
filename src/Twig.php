@@ -191,13 +191,13 @@ class Twig
     */
     public function safe_anchor( $uri = '', $title = '', $attributes = [] )
     {
-        $uri = html_escape( $uri );
-        $title = html_escape( $title );
+        $uri = esc( $uri );
+        $title = esc( $title );
 
         $new_attr = [];
         foreach( $attributes as $key => $val )
         {
-                $new_attr[ html_escape( $key ) ] = html_escape( $val );
+                $new_attr[ esc( $key ) ] = esc( $val );
         }
 
         return anchor( $uri, $title, $new_attr );
