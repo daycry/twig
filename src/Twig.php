@@ -68,17 +68,9 @@ class Twig
     {
         if( empty( $config ) )
         {
-            $config = new \Config\Twig();
+            $config = new \Daycry\Twig\Config\Twig();
         }
 
-        /*foreach( $config as $key => $value )
-        {
-            if( property_exists( $this, $key ) )
-            {
-                var_dump( "existe : " . $key );
-            }
-        }*/
-        
         if( isset( $config->functions_asis ) )
         {
             $this->functions_asis = array_unique( array_merge( $this->functions_asis, $config->functions_asis ) );
@@ -89,9 +81,6 @@ class Twig
             $this->functions_safe = array_unique( array_merge( $this->functions_safe, $config->functions_safe ) );
         }
 
-        //$paths = config( 'Paths' );
-        //var_dump( $paths );
-        //$this->paths = ( isset( $config->paths ) ) ? $config->paths : $paths->viewDirectory;
         $this->paths = ( isset( $config->paths ) ) ? $config->paths : APPPATH . 'Views';
         
         // default Twig config
