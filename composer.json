@@ -1,12 +1,37 @@
 {
     "name": "daycry/twig",
-    "require": {
-      "php": ">=7.2",
-      "twig/twig": "~1.38"
+    "description": "twig for Codeigniter 4",
+    "keywords":
+    [
+        "codeigniter", "twig", "templates", "codeigniter4", "html"
+    ],
+    "homepage": "https://github.com/daycry/twig",
+    "authors":
+    [
+        {
+            "name": "daycry",
+            "homepage": "https://github.com/daycry",
+            "role": "Developer"
+        }
+    ],
+    "license": "MIT",
+    "require":
+    {
+        "php": ">=7.2",
+        "twig/twig": "~1.38"
     },
-    "autoload": {
-        "psr-4": {
+    "autoload":
+    {
+        "psr-4":
+        {
             "Daycry\\Twig\\": "src/"
         }
+    },
+    "scripts":
+    {
+        "post-update-cmd":
+        [
+            "@composer dump-autoload"
+        ]
     }
 }

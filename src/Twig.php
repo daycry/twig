@@ -68,7 +68,7 @@ class Twig
     {
         if( empty( $config ) )
         {
-            $config = new \Daycry\Twig\Config\Twig();
+            $config = config( 'Twig' );
         }
 
         if( isset( $config->functions_asis ) )
