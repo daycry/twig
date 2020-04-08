@@ -48,6 +48,26 @@ $twig->display( 'file.html', [] );
 
 ```
 
+## Usage as a Helper
+
+In your BaseController - $helpers array, add an element with your helper filename.
+
+```php
+protected $helpers = [ 'twig_helper' ];
+
+```
+
+And then you can use the helper
+
+```php
+
+$twig = twig_instance();
+$session = \Config\Services::session();
+$session->set( array( 'name' => 'Daycry' ) );
+$twig->addGlobal( 'session', $session );
+
+```
+
 ## Add Globals
 
 ```php
@@ -56,6 +76,5 @@ $twig = new \Daycry\Twig\Twig();
 $session = \Config\Services::session();
 $session->set( array( 'name' => 'Daycry' ) );
 $twig->addGlobal( 'session', $session );
-
 
 ```
