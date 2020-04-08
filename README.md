@@ -62,9 +62,7 @@ And then you can use the helper
 ```php
 
 $twig = twig_instance();
-$session = \Config\Services::session();
-$session->set( array( 'name' => 'Daycry' ) );
-$twig->addGlobal( 'session', $session );
+$twig->display( 'file.html', [] );
 
 ```
 
@@ -76,5 +74,26 @@ $twig = new \Daycry\Twig\Twig();
 $session = \Config\Services::session();
 $session->set( array( 'name' => 'Daycry' ) );
 $twig->addGlobal( 'session', $session );
+$twig->display( 'file.html', [] );
+
+```
+
+## File Example
+
+```php
+
+<!DOCTYPE html>
+<html lang="es">  
+    <head>    
+        <title>Example</title>    
+        <meta charset="UTF-8">
+        <meta name="title" content="Example">
+        <meta name="description" content="Example">   
+    </head>  
+    <body>
+        <h1>Hi {{ name }}</h1>
+        {{ dump( session.get( 'name' ) ) }}
+    </body>  
+</html>
 
 ```
