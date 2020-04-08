@@ -10,7 +10,7 @@ class TwigPublish extends BaseCommand
     protected $name        = 'twig:publish';
     protected $description = 'Twig config file publisher.';
     /**
-     * The path to Michalsn\Minifier\src directory.
+     * The path to Daycry\Twig\src directory.
      *
      * @var string
      */
