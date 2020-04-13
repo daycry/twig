@@ -5,21 +5,24 @@ use Daycry\Twig\Twig;
 class TwigTest extends \CodeIgniter\Test\CIUnitTestCase
 {
 	protected $twig;
+	protected $supportPath = null;
 
 	public function setUp(): void
 	{
 		parent::setUp();
 
+		$this->supportPath = realpath( __DIR__ . '/../_support/') . DIRECTORY_SEPARATOR;
+
 		$config = new \Daycry\Twig\Config\Twig();
 
-		$config->paths = [ SUPPORTPATH . 'Views' ];
+		$config->paths = [ $this->supportPath . 'Views' ];
 
 		$this->twig = new Twig( $config );
 	}
 
 	public function testLoadTwig()
 	{
-		$result = $this->twig->render( 'base.html' );
+		$result = $this->twig->render( 'test.html' );
 
 		$this->assertEquals('<h1>daycry</h1>', $result );
 	}

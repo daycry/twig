@@ -81,11 +81,11 @@ class Twig
             $this->functions_safe = array_unique( array_merge( $this->functions_safe, $config->functions_safe ) );
         }
 
-        $this->paths = APPPATH . 'Views';
+        $this->paths = [ APPPATH . 'Views' ];
 
         if( isset( $config->paths ) )
         {
-            $this->functions_safe = array_unique( array_merge( $this->paths, $config->paths ) );
+            $this->paths = array_unique( array_merge( $this->paths, $config->paths ) );
         }
 
         //$this->paths = ( isset( $config->paths ) ) ? $config->paths : APPPATH . 'Views';
@@ -206,6 +206,14 @@ class Twig
     {
         $this->createTwig();
         return $this->twig;
+    }
+
+    /**
+     * @return array
+     */
+    public function getPaths()
+    {
+        return $this->paths;
     }
     
     /**

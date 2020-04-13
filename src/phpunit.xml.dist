@@ -47,6 +47,9 @@
 		<!-- Directory containing the front controller (index.php) -->
 		<const name="PUBLICPATH" value="./vendor/codeigniter4/framework/public/"/>
 
+		<!-- Directory containing the front controller (index.php) -->
+		<const name="SUPPORTPATH" value="./vendor/daycry/twig/tests/_support/"/>
+
 		<!-- Database configuration -->
 <!--	<env name="database.tests.hostname" value="localhost"/>  -->
 <!--	<env name="database.tests.database" value="tests"/>	     -->
