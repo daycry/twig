@@ -97,3 +97,11 @@ $twig->display( 'file.html', [] );
 </html>
 
 ```
+
+## How Run Tests
+
+```php
+
+vendor\bin\phpunit vendor\daycry\twig\tests
+
+```
