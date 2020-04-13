@@ -26,4 +26,14 @@ class TwigTest extends \CodeIgniter\Test\CIUnitTestCase
 
 		$this->assertEquals('<h1>daycry</h1>', $result );
 	}
+
+	public function testAddGlobal()
+	{
+		$session = array( 'name' => 'daycry' );
+		
+        $this->twig->addGlobal( 'session', $session );
+		$result = $this->twig->render( 'test-global.html' );
+
+		$this->assertEquals('<h1>daycry</h1>', $result );
+	}
 }
