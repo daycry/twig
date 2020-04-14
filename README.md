@@ -4,7 +4,7 @@ Twig for Codeigniter 4
 
 ## Kudos
 
-All kudos for this tool will be sent to https://github.com/ercobo
+All kudos for this tool will be sent to https://github.com/daycry
 
 ## Installation via composer
 
