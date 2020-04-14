@@ -1,16 +1,16 @@
 {
-    "name": "daycry/twig",
+    "name": "ercobo/twig",
     "description": "twig for Codeigniter 4",
     "keywords":
     [
         "codeigniter", "twig", "templates", "codeigniter4", "html"
     ],
-    "homepage": "https://github.com/daycry/twig",
+    "homepage": "https://github.com/ercobo/twig",
     "authors":
     [
         {
-            "name": "daycry",
-            "homepage": "https://github.com/daycry",
+            "name": "ercobo",
+            "homepage": "https://github.com/ercobo",
             "role": "Developer"
         }
     ],
@@ -18,7 +18,7 @@
     "require":
     {
         "php": ">=7.2",
-        "twig/twig": "~1.38"
+        "twig/twig": "^3.0"
     },
     "require-dev":
     {
@@ -29,7 +29,7 @@
     {
         "psr-4":
         {
-            "Daycry\\Twig\\": "src/"
+            "ercobo\\Twig\\": "src/"
         }
     },
     "autoload-dev":
