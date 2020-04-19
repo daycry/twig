@@ -81,8 +81,6 @@ class Twig
             $this->functions_safe = array_unique( array_merge( $this->functions_safe, $config->functions_safe ) );
         }
 
-        $this->paths = [ APPPATH . 'Views' ];
-
         if( isset( $config->paths ) )
         {
             $this->paths = array_unique( array_merge( $this->paths, $config->paths ) );
