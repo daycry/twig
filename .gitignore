@@ -1,0 +1,7 @@
+
+*.json
+*.md
+tests/_support/Views/test-global.html.twig
+tests/_support/Views/test.html.twig
+tests/unit/TwigTest.php
+tests/unit/TwigTest.php

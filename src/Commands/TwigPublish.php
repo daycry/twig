@@ -1,4 +1,6 @@
-<?php namespace Daycry\Twig\Commands;
+<?php
+
+namespace Daycry\Twig\Commands;
 
 use Config\Autoload;
 use CodeIgniter\CLI\CLI;
@@ -25,7 +27,7 @@ class TwigPublish extends BaseCommand
     {
         $this->determineSourcePath();
         $this->publishConfig();
-        CLI::write('Config file was successfully generated.', 'green');       
+        CLI::write('Config file was successfully generated.', 'green');
     }
     //--------------------------------------------------------------------
     /**
@@ -34,8 +36,7 @@ class TwigPublish extends BaseCommand
     protected function determineSourcePath()
     {
         $this->sourcePath = realpath(__DIR__ . '/../');
-        if ($this->sourcePath == '/' || empty($this->sourcePath))
-        {
+        if ($this->sourcePath == '/' || empty($this->sourcePath)) {
             CLI::error('Unable to determine the correct source directory. Bailing.');
             exit();
         }
@@ -48,8 +49,9 @@ class TwigPublish extends BaseCommand
     {
         $path = "{$this->sourcePath}/Config/Twig.php";
         $content = file_get_contents($path);
+        $content = str_replace('use CodeIgniter\Config\BaseConfig', "use Daycry\Twig\Config\Twig as ConfigTwig", $content);
         $content = str_replace('namespace Daycry\Twig\Config', "namespace Config", $content);
-        $content = str_replace('extends BaseConfig', "extends \Daycry\Twig\Config\Twig", $content);
+        $content = str_replace('extends BaseConfig', "extends ConfigTwig", $content);
         $this->writeFile('Config/Twig.php', $content);
     }
     //--------------------------------------------------------------------
@@ -64,21 +66,16 @@ class TwigPublish extends BaseCommand
         $config = new Autoload();
         $appPath = $config->psr4[APP_NAMESPACE];
         $directory = dirname($appPath . $path);
-        if (! is_dir($directory))
-        {
+        if (!is_dir($directory)) {
             mkdir($directory, 0777, true);
         }
-        if (file_exists($appPath . $path) && CLI::prompt('Config file already exists, do you want to replace it?', ['y', 'n']) == 'n')
-        {
+        if (file_exists($appPath . $path) && CLI::prompt('Config file already exists, do you want to replace it?', ['y', 'n']) == 'n') {
             CLI::error('Cancelled');
             exit();
         }
-        try
-        {
+        try {
             write_file($appPath . $path, $content);
-        }
-        catch (\Exception $e)
-        {
+        } catch (\Exception $e) {
             $this->showError($e);
             exit();
         }
