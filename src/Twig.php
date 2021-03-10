@@ -171,7 +171,7 @@ class Twig
         // customized functions
         if( function_exists( 'anchor' ) )
         {
-            $this->twig->addFunction( nnew \Twig\TwigFunction( 'anchor', [ $this, 'safe_anchor' ], [ 'is_safe' => [ 'html' ] ] ) );
+            $this->twig->addFunction( new \Twig\TwigFunction( 'anchor', [ $this, 'safe_anchor' ], [ 'is_safe' => [ 'html' ] ] ) );
         }
                                          
         $this->twig->addFunction( new \Twig\TwigFunction( 'validation_list_errors', [ $this, 'validation_list_errors' ], ['is_safe' => [ 'html' ] ] ) );
