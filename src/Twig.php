@@ -115,7 +115,7 @@ class Twig
             $this->loader = new \Twig\Loader\FilesystemLoader( $this->paths );
         }
 
-        $twig = new \Twig_Environment( $this->loader, $this->config );
+        $twig = new \Twig\Environment( $this->loader, $this->config );
 
         if( $this->config[ 'debug' ] )
         {
@@ -204,9 +204,9 @@ class Twig
     }
 
     /**
-     * @return \Twig_Environment
+     * @return \Twig\Environment
      */
-    public function getTwig()
+    public function getTwig(): \Twig\Environment
     {
         $this->createTwig();
         return $this->twig;
