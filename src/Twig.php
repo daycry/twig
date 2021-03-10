@@ -112,7 +112,7 @@ class Twig
 
         if( $this->loader === null )
         {
-            $this->loader = new \Twig_Loader_Filesystem( $this->paths );
+            $this->loader = new \Twig\Loader\FilesystemLoader( $this->paths );
         }
 
         $twig = new \Twig_Environment( $this->loader, $this->config );
