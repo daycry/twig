@@ -185,12 +185,8 @@ class Twig
     * @param array  $attributes [changed] only array is acceptable
     * @return string
     */
-    public function safe_anchor( $uri = '', $title = '', $attributes = [] )
+    public function safe_anchor( $uri = '', $title = '', $attributes = [] ): string
     {
-        $uri = '',
-        $title = '',
-        $attributes = []
-    ): string {
         $uri = esc( $uri, 'url' );
         $title = esc( $title );
 
