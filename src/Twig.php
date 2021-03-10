@@ -119,7 +119,7 @@ class Twig
 
         if( $this->config[ 'debug' ] )
         {
-            $twig->addExtension( new \Twig_Extension_Debug() );
+            $twig->addExtension( new \Twig\Extension\DebugExtension() );
         }
 
         $this->twig = $twig;
@@ -155,7 +155,7 @@ class Twig
         {
             if ( function_exists( $function ) )
             {
-                $this->twig->addFunction( new \Twig_SimpleFunction( $function, $function ) );
+                $this->twig->addFunction( new \Twig\TwigFunction( $function, $function ) );
             }
         }
 
@@ -164,17 +164,19 @@ class Twig
         {
             if (function_exists($function))
             {
-                $this->twig->addFunction( new \Twig_SimpleFunction( $function, $function, [ 'is_safe' => [ 'html' ] ] ) );
+                $this->twig->addFunction( new \Twig\TwigFunction( $function, $function, [ 'is_safe' => [ 'html' ] ] ) );
             }
         }
 
         // customized functions
         if( function_exists( 'anchor' ) )
         {
-            $this->twig->addFunction( new \Twig_SimpleFunction( 'anchor', [ $this, 'safe_anchor' ], [ 'is_safe' => [ 'html' ] ] ) );
+            $this->twig->addFunction( nnew \Twig\TwigFunction( 'anchor', [ $this, 'safe_anchor' ], [ 'is_safe' => [ 'html' ] ] ) );
         }
+                                         
+        $this->twig->addFunction( new \Twig\TwigFunction( 'validation_list_errors', [ $this, 'validation_list_errors' ], ['is_safe' => [ 'html' ] ] ) );
 
-        $this->functions_added = TRUE;
+        $this->functions_added = true;
     }
     
     /**
@@ -185,16 +187,24 @@ class Twig
     */
     public function safe_anchor( $uri = '', $title = '', $attributes = [] )
     {
-        $uri = esc( $uri );
+        $uri = '',
+        $title = '',
+        $attributes = []
+    ): string {
+        $uri = esc( $uri, 'url' );
         $title = esc( $title );
 
         $new_attr = [];
-        foreach( $attributes as $key => $val )
-        {
-                $new_attr[ esc( $key ) ] = esc( $val );
+        foreach ($attributes as $key => $val) {
+            $new_attr[ esc( $key ) ] = $val;
         }
 
         return anchor( $uri, $title, $new_attr );
+    }
+        
+    public function validation_list_errors(): string
+    {
+        return \Config\Services::validation()->listErrors();
     }
 
     /**
