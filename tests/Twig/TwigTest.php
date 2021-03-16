@@ -18,7 +18,10 @@ class TwigTest extends TestCase
 
     public function testRedner()
     {
-        $obj = new Twig(['paths' => __DIR__ . '/../templates/']);
+        $config = config( 'Daycry\Twig\Config\Twig' );
+        $config->paths = [ __DIR__ . '/../templates/' ];
+
+        $obj = new \Daycry\Twig\Twig( $config );
 
         $data = [
             'name' => 'CodeIgniter',
@@ -29,7 +32,10 @@ class TwigTest extends TestCase
 
     public function testDisplay()
     {
-        $obj = new Twig(['paths' => __DIR__ . '/../templates/']);
+        $config = config( 'Daycry\Twig\Config\Twig' );
+        $config->paths = [ __DIR__ . '/../templates/' ];
+
+        $obj = new \Daycry\Twig\Twig( $config );
 
         $this->expectOutputString('Hello CodeIgniter!' . "\n");
 
@@ -41,7 +47,11 @@ class TwigTest extends TestCase
 
     public function testAddGlobal()
     {
-        $obj = new Twig(['paths' => __DIR__ . '/../templates/']);
+        $config = config( 'Daycry\Twig\Config\Twig' );
+        $config->paths = [ __DIR__ . '/../templates/' ];
+
+        $obj = new \Daycry\Twig\Twig( $config );
+
         $obj->addGlobal('sitename', 'Twig Test Site');
 
         $output = $obj->render('global');
@@ -50,7 +60,10 @@ class TwigTest extends TestCase
 
     public function testAddFunctionsRunsOnlyOnce()
     {
-        $obj = new Twig(['paths' => __DIR__ . '/../templates/']);
+        $config = config( 'Daycry\Twig\Config\Twig' );
+        $config->paths = [ __DIR__ . '/../templates/' ];
+
+        $obj = new \Daycry\Twig\Twig( $config );
 
         $data = [
             'name' => 'CodeIgniter',
@@ -82,27 +95,26 @@ class TwigTest extends TestCase
 
     public function testFunctionAsIs()
     {
-        $obj = new Twig(
-            [
-                'paths' => __DIR__ . '/../templates/',
-                'functions' => ['md5'],
-                'cache' => false,
-            ]
-        );
+        $config = config( 'Daycry\Twig\Config\Twig' );
+        $config->paths = [ __DIR__ . '/../templates/' ];
+        $config->functions_asis = [ 'md5' ];
+        $config->cache = false;
+
+        $obj = new \Daycry\Twig\Twig( $config );
 
         $output = $obj->render('functions_asis');
+
         $this->assertEquals('900150983cd24fb0d6963f7d28e17f72' . "\n", $output);
     }
 
     public function testFunctionSafe()
     {
-        $obj = new Twig(
-            [
-                'paths' => __DIR__ . '/../templates/',
-                'functions_safe' => ['test_safe'],
-                'cache' => false,
-            ]
-        );
+        $config = config( 'Daycry\Twig\Config\Twig' );
+        $config->paths = [ __DIR__ . '/../templates/' ];
+        $config->functions_safe = [ 'test_safe' ];
+        $config->cache = false;
+
+        $obj = new \Daycry\Twig\Twig( $config );
 
         $output = $obj->render('functions_safe');
         $this->assertEquals('<s>test</s>' . "\n", $output);

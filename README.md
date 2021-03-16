@@ -101,7 +101,8 @@ $twig->display( 'file.html', [] );
 ## How Run Tests
 
 ```php
-
-vendor\bin\phpunit vendor\daycry\twig\tests
+cd vendor\daycry\twig\
+composer install
+vendor\bin\phpunit
 
 ```
