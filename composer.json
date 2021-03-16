@@ -36,15 +36,10 @@
     {
         "psr-4":
         {
-            "Tests\\Support\\": "tests/_support"
+            "Daycry\\Twig\\": "tests/Twig/"
         }
     },
-    "scripts":
-    {
-        "test": "vendor/bin/phpunit",
-        "post-update-cmd":
-        [
-            "@composer dump-autoload"
-        ]
+    "scripts": {
+        "test": "phpunit"
     }
 }
