@@ -1,4 +1,4 @@
-# Twig
+# Twig [![](https://github.com/daycry/twig/workflows/PHP%20Tests/badge.svg)](https://github.com/daycry/twig/actions?query=workflow%3A%22PHP+Tests%22)
 
 Twig for Codeigniter 4
 
