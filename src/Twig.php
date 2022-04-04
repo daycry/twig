@@ -22,7 +22,7 @@ class Twig
     * @var array Paths to Twig templates
     */
     private $paths = [ APPPATH . 'Views' ];
-    
+
     /**
     * @var array Functions to add to Twig
     */
@@ -35,14 +35,20 @@ class Twig
     private $functions_safe = [
         'form_open', 'form_close', 'form_error', 'form_hidden', 'set_value'
     ];
-    
+
+    /**
+     * @var string To set the autoescaping
+     * @see https://twig.symfony.com/doc/3.x/api.html#environment-options
+     */
+    private $autoescape = 'html';
+
     /**
     * @var array Twig Environment Options
     * @see http://twig.sensiolabs.org/doc/api.html#environment-options
     */
     private $config = [];
 
-    
+
     /**
     * @var bool Whether functions are added or not
     */
@@ -57,13 +63,13 @@ class Twig
      * @var Twig_Loader_Filesystem
      */
     private $loader;
-    
+
     /**
      * @var string
      */
     private $ext = '.twig';
-    
-    
+
+
     public function __construct( BaseConfig $config = null )
     {
         if( empty( $config ) )
@@ -75,7 +81,7 @@ class Twig
         {
             $this->functions_asis = array_unique( array_merge( $this->functions_asis, $config->functions_asis ) );
         }
-        
+
         if( isset( $config->functions_safe ) )
         {
             $this->functions_safe = array_unique( array_merge( $this->functions_safe, $config->functions_safe ) );
@@ -86,22 +92,27 @@ class Twig
             $this->paths = array_unique( array_merge( $this->paths, $config->paths ) );
         }
 
+        if( isset( $config->autoescape ) )
+        {
+            $this->autoescape = $config->autoescape;
+        }
+
         //$this->paths = ( isset( $config->paths ) ) ? $config->paths : APPPATH . 'Views';
-        
+
         // default Twig config
         $this->config = [
             'cache'      => WRITEPATH . 'cache' . DIRECTORY_SEPARATOR . 'twig',
             'debug'      => ENVIRONMENT !== 'production',
-            'autoescape' => 'html'
+            'autoescape' => $this->autoescape
         ];
     }
-    
+
     protected function resetTwig()
     {
         $this->twig = null;
         $this->createTwig();
     }
-    
+
     protected function createTwig()
     {
         // $this->twig is singleton
@@ -124,12 +135,12 @@ class Twig
 
         $this->twig = $twig;
     }
-    
+
     protected function setLoader($loader)
     {
         $this->loader = $loader;
     }
-    
+
     /**
     * Registers a Global
     *
@@ -141,7 +152,7 @@ class Twig
         $this->createTwig();
         $this->twig->addGlobal( $name, $value );
     }
-   
+
     protected function addFunctions()
     {
         // Runs only once
@@ -173,12 +184,12 @@ class Twig
         {
             $this->twig->addFunction( new \Twig\TwigFunction( 'anchor', [ $this, 'safe_anchor' ], [ 'is_safe' => [ 'html' ] ] ) );
         }
-                                         
+
         $this->twig->addFunction( new \Twig\TwigFunction( 'validation_list_errors', [ $this, 'validation_list_errors' ], ['is_safe' => [ 'html' ] ] ) );
 
         $this->functions_added = true;
     }
-    
+
     /**
     * @param string $uri
     * @param string $title
@@ -197,7 +208,7 @@ class Twig
 
         return anchor( $uri, $title, $new_attr );
     }
-        
+
     public function validation_list_errors(): string
     {
         return \Config\Services::validation()->listErrors();
@@ -219,7 +230,7 @@ class Twig
     {
         return $this->paths;
     }
-    
+
     /**
     * Renders Twig Template and Set Output
     *
@@ -230,7 +241,7 @@ class Twig
     {
         echo $this->render( $view, $params );
     }
-    
+
     /**
     * Renders Twig Template and Returns as String
     *
@@ -246,11 +257,11 @@ class Twig
             // We call addFunctions() here, because we must call addFunctions()
             // after loading CodeIgniter functions in a controller.
             $this->addFunctions();
-            
+
             $view = $view . '.twig';
             return $this->twig->render( $view, $params );
-        } 
-        catch( Twig_Error_Loader $error_Loader ) 
+        }
+        catch( Twig_Error_Loader $error_Loader )
         {
             throw new PageNotFoundException($error_Loader);
         }
