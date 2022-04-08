@@ -37,6 +37,17 @@ class Twig
     ];
 
     /**
+     * @var array filters
+     */
+    private $filters = [];
+
+    /**
+     * @var array Filters with 'is_safe' option
+     * @see http://twig.sensiolabs.org/doc/advanced.html#automatic-escaping
+     */
+    private $filters_safe = [];
+
+    /**
      * @var string To set the autoescaping
      * @see https://twig.symfony.com/doc/3.x/api.html#environment-options
      */
@@ -48,11 +59,15 @@ class Twig
     */
     private $config = [];
 
-
     /**
     * @var bool Whether functions are added or not
     */
     private $functions_added = FALSE;
+
+    /**
+    * @var bool Whether filters are added or not
+    */
+    private $filters_added = FALSE;
 
     /**
      * @var Twig_Environment
@@ -85,6 +100,16 @@ class Twig
         if( isset( $config->functions_safe ) )
         {
             $this->functions_safe = array_unique( array_merge( $this->functions_safe, $config->functions_safe ) );
+        }
+
+        if( isset( $config->filters_safe ) )
+        {
+            $this->filters_safe = array_unique( array_merge( $this->filters_safe, $config->filters_safe ) );
+        }
+
+        if( isset( $config->filters ) )
+        {
+            $this->filters = array_unique( array_merge( $this->filters, $config->filters ) );
         }
 
         if( isset( $config->paths ) )
@@ -151,6 +176,35 @@ class Twig
     {
         $this->createTwig();
         $this->twig->addGlobal( $name, $value );
+    }
+
+    protected function addFilters()
+    {
+        // Runs only once
+        if( $this->filters_added )
+        {
+            return;
+        }
+
+        // normal filters
+        foreach( $this->filters as $filter )
+        {
+            if ( function_exists( $filter ) )
+            {
+                $this->twig->addFilter( new \Twig\TwigFilter( $filter, $filter ) );
+            }
+        }
+
+        // safe filters
+        foreach( $this->filters_safe as $filter_safe )
+        {
+            if ( function_exists( $filter_safe ) )
+            {
+                $this->twig->addFilter( new \Twig\TwigFilter( $filter_safe, $filter_safe, [ 'is_safe' => [ 'html' ] ] ) );
+            }
+        }
+
+        $this->filters_added = true;
     }
 
     protected function addFunctions()
@@ -254,9 +308,10 @@ class Twig
         try
         {
             $this->createTwig();
-            // We call addFunctions() here, because we must call addFunctions()
+            // We call addFunctions() and addFilters() here, because we must call addFunctions() and addFilters()
             // after loading CodeIgniter functions in a controller.
             $this->addFunctions();
+            $this->addFilters();
 
             $view = $view . '.twig';
             return $this->twig->render( $view, $params );
