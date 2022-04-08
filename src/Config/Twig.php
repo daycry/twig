@@ -8,6 +8,10 @@ class Twig extends BaseConfig
 
     public $functions_asis = [ 'current_url' ];
 
+    public $filters = [];
+
+    public $filters_safe = [];
+
     public $paths = [];
 
     public $autoescape = 'html';
