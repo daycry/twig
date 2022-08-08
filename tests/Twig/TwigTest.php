@@ -1,122 +1,133 @@
 <?php
 
-namespace Daycry\Twig;
+namespace Tests;
 
-use ReflectionObject;
+use CodeIgniter\Test\CIUnitTestCase;
 
-require __DIR__ . '/../twig_functions.php';
-
-class TwigTest extends TestCase
+class TwigTest extends CIUnitTestCase
 {
+    protected \Daycry\Twig\Config\Twig $config;
+    protected \Daycry\Twig\Twig $twig;
+    
+    protected function setUp(): void
+    {
+        helper(array('url', 'form', 'twig_helper'));
+
+        parent::setUp();
+
+        $this->config = new \Daycry\Twig\Config\Twig();
+        $this->config->paths = [ './tests/_support/templates/' ];
+        $this->config->functions_asis = [ 'md5' ];
+
+        $this->twig = new \Daycry\Twig\Twig( $this->config );
+    }
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-
-        helper('url');
-        helper('form');
     }
 
-    public function testRedner()
+    public function testConstructDefault()
     {
-        $config = config( 'Daycry\Twig\Config\Twig' );
-        $config->paths = [ __DIR__ . '/../templates/' ];
+        $this->twig = new \Daycry\Twig\Twig();
 
-        $obj = new \Daycry\Twig\Twig( $config );
+        $this->assertInstanceOf( \Twig\Environment::class, $this->twig->getTwig());
+        $this->assertCount( 1, $this->twig->getPaths());
+    }
 
+    public function testConstructCustomConfig()
+    {
+        $this->assertInstanceOf( \Twig\Environment::class, $this->twig->getTwig());
+        $this->assertCount( 2, $this->twig->getPaths());
+    }
+
+    public function testConstructAsAService()
+    {
+        $this->twig = \Config\Services::twig(null, false);
+
+        $this->assertInstanceOf( \Twig\Environment::class, $this->twig->getTwig());
+        $this->assertCount( 1, $this->twig->getPaths());
+    }
+
+    public function testConstructAsAServiceCustomConfig()
+    {
+        $this->twig = \Config\Services::twig( $this->config, false );
+
+        $this->assertInstanceOf( \Twig\Environment::class, $this->twig->getTwig());
+        $this->assertCount( 2, $this->twig->getPaths());
+    }
+
+    public function testConstructAsAHelper()
+    {
+        $this->twig = twig_instance();
+
+        $this->assertInstanceOf( \Twig\Environment::class, $this->twig->getTwig());
+        $this->assertCount( 1, $this->twig->getPaths());
+    }
+
+    public function testRender()
+    {
         $data = [
             'name' => 'CodeIgniter',
         ];
-        $output = $obj->render('welcome', $data);
+        $output = $this->twig->render('welcome', $data);
         $this->assertEquals('Hello CodeIgniter!' . "\n", $output);
     }
 
     public function testDisplay()
     {
-        $config = config( 'Daycry\Twig\Config\Twig' );
-        $config->paths = [ __DIR__ . '/../templates/' ];
-
-        $obj = new \Daycry\Twig\Twig( $config );
-
-        $this->expectOutputString('Hello CodeIgniter!' . "\n");
-
         $data = [
             'name' => 'CodeIgniter',
         ];
-        $obj->display('welcome', $data);
+
+        $this->twig->display('welcome', $data);
+
+        $this->expectOutputString('Hello CodeIgniter!' . "\n");
     }
 
     public function testAddGlobal()
     {
-        $config = config( 'Daycry\Twig\Config\Twig' );
-        $config->paths = [ __DIR__ . '/../templates/' ];
+        $this->twig->addGlobal('sitename', 'Global');
 
-        $obj = new \Daycry\Twig\Twig( $config );
-
-        $obj->addGlobal('sitename', 'Twig Test Site');
-
-        $output = $obj->render('global');
-        $this->assertEquals('<title>Twig Test Site</title>' . "\n", $output);
+        $output = $this->twig->render('global');
+        $this->assertEquals('<title>Global</title>' . "\n", $output);
     }
 
     public function testAddFunctionsRunsOnlyOnce()
     {
-        $config = config( 'Daycry\Twig\Config\Twig' );
-        $config->paths = [ __DIR__ . '/../templates/' ];
-
-        $obj = new \Daycry\Twig\Twig( $config );
-
         $data = [
             'name' => 'CodeIgniter',
         ];
 
-        $ref_obj = new ReflectionObject($obj);
-        $ref_property = $ref_obj->getProperty('functions_added');
-        $ref_property->setAccessible(true);
-        $functions_added = $ref_property->getValue($obj);
-        $this->assertEquals(false, $functions_added);
+        $this->assertFalse($this->getPrivateProperty($this->twig, 'functions_added'));
 
-        $output = $obj->render('welcome', $data);
+        $output = $this->twig->render('welcome', $data);
 
-        $ref_obj = new ReflectionObject($obj);
-        $ref_property = $ref_obj->getProperty('functions_added');
-        $ref_property->setAccessible(true);
-        $functions_added = $ref_property->getValue($obj);
-        $this->assertEquals(true, $functions_added);
+        $this->assertEquals('Hello CodeIgniter!' . "\n", $output);
+        $this->assertTrue($this->getPrivateProperty($this->twig, 'functions_added'));
 
         // Calls render() twice
-        $output = $obj->render('welcome', $data);
+        $output = $this->twig->render('Welcome', $data);
 
-        $ref_obj = new ReflectionObject($obj);
-        $ref_property = $ref_obj->getProperty('functions_added');
-        $ref_property->setAccessible(true);
-        $functions_added = $ref_property->getValue($obj);
-        $this->assertEquals(true, $functions_added);
+        $this->assertEquals('Hello CodeIgniter!' . "\n", $output);
+        $this->assertTrue($this->getPrivateProperty($this->twig, 'functions_added'));
     }
 
     public function testFunctionAsIs()
     {
-        $config = config( 'Daycry\Twig\Config\Twig' );
-        $config->paths = [ __DIR__ . '/../templates/' ];
-        $config->functions_asis = [ 'md5' ];
-        $config->cache = false;
-
-        $obj = new \Daycry\Twig\Twig( $config );
-
-        $output = $obj->render('functions_asis');
+        $output = $this->twig->render('functions_asis');
 
         $this->assertEquals('900150983cd24fb0d6963f7d28e17f72' . "\n", $output);
     }
 
     public function testFunctionSafe()
     {
-        $config = config( 'Daycry\Twig\Config\Twig' );
-        $config->paths = [ __DIR__ . '/../templates/' ];
-        $config->functions_safe = [ 'test_safe' ];
-        $config->cache = false;
+        $this->config->functions_safe = [ 'functionSafe' ];
+        $this->config->cache = false;
 
-        $obj = new \Daycry\Twig\Twig( $config );
+        $this->twig->initialize( $this->config );
 
-        $output = $obj->render('functions_safe');
+        $output = $this->twig->render('functions_safe');
         $this->assertEquals('<s>test</s>' . "\n", $output);
     }
 }

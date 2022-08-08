@@ -1,8 +1,10 @@
 <?php
 
-namespace Daycry\Twig;
+namespace Tests;
 
-class UrlHelperTest extends TestCase
+use CodeIgniter\Test\CIUnitTestCase;
+
+class UrlHelperTest extends CIUnitTestCase
 {
     public static function setUpBeforeClass(): void
     {
@@ -11,7 +13,7 @@ class UrlHelperTest extends TestCase
         helper('url');
     }
 
-    public function test_base_url()
+    public function testBaseUrl()
     {
         $acutual = base_url('images/icons/simle.jpg');
         $expected = 'http://localhost/images/icons/simle.jpg';
@@ -23,7 +25,7 @@ class UrlHelperTest extends TestCase
         $this->assertEquals($expected, $acutual);
     }
 
-    public function test_site_url()
+    public function testSiteUrl()
     {
         $actual = site_url('welcome');
         $expected = 'http://localhost/index.php/welcome';
@@ -35,7 +37,7 @@ class UrlHelperTest extends TestCase
         $this->assertEquals($expected, $actual);
     }
 
-    public function test_anchor()
+    public function testAnchor()
     {
         $actual = anchor(
             'news/local/123',

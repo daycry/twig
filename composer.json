@@ -42,8 +42,10 @@
     {
         "psr-4":
         {
-            "Daycry\\Twig\\": "tests/Twig/"
-        }
+            "Tests\\": "tests/",
+            "Tests\\Support\\": "tests/_support"
+        },
+        "files": ["tests/_support/functions/twigFunctions.php"]
     },
     "scripts": {
         "test": "vendor/bin/phpunit",

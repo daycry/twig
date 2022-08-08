@@ -1,21 +1,24 @@
 <?php
 
-namespace Daycry\Twig;
+namespace Tests;
 
-class TwigHelperTest extends TestCase
+use CodeIgniter\Test\CIUnitTestCase;
+
+class TwigHelperTest extends CIUnitTestCase
 {
     private $twig;
 
-    public static function setUpBeforeClass(): void
+    protected function setUp(): void
     {
-        parent::setUpBeforeClass();
+        helper(array('url'));
 
-        helper('url');
-    }
+        parent::setUp();
 
-    public function setUp(): void
-    {
-        $twig = new Twig();
+        $this->config = new \Daycry\Twig\Config\Twig();
+        $this->config->paths = [ './tests/_support/templates/' ];
+        $this->config->functions_asis = [ 'md5' ];
+
+        $this->twig = new \Daycry\Twig\Twig( $this->config );
 
         $loader = new \Twig\Loader\ArrayLoader(
             [
@@ -24,28 +27,23 @@ class TwigHelperTest extends TestCase
                 'anchor' => '{{ anchor(uri, title, attributes) }}',
             ]
         );
-        $setLoader = ReflectionHelper::getPrivateMethodInvoker(
-            $twig,
-            'setLoader'
-        );
+        $setLoader = $this->getPrivateMethodInvoker($this->twig, 'setLoader');
         $setLoader($loader);
 
-        $resetTwig = ReflectionHelper::getPrivateMethodInvoker(
-            $twig,
-            'resetTwig'
-        );
-        $resetTwig();
+        $this->twig->resetTwig();
 
-        $addFunctions = ReflectionHelper::getPrivateMethodInvoker(
-            $twig,
-            'addFunctions'
-        );
+        $addFunctions = $this->getPrivateMethodInvoker($this->twig, 'addFunctions');
         $addFunctions();
 
-        $this->twig = $twig->getTwig();
+        $this->twig = $this->twig->getTwig();
     }
 
-    public function test_anchor()
+    public static function setUpBeforeClass(): void
+    {
+        parent::setUpBeforeClass();
+    }
+
+    public function testAnchor()
     {
         $actual = $this->twig->render(
             'anchor',
@@ -72,18 +70,16 @@ class TwigHelperTest extends TestCase
         $this->assertEquals($expected, $actual);
     }
 
-    public function test_base_url()
+    public function testBaseUrl()
     {
         $actual = $this->twig->render('base_url');
-//		$expected = 'http://localhost/&quot;&gt;&lt;s&gt;abc&lt;/s&gt;&lt;a name=&quot;test'; // CI3
         $expected = 'http://localhost/%22%3E%3Cs%3Eabc%3C/s%3E%3Ca%20name=%22test';
         $this->assertEquals($expected, $actual);
     }
 
-    public function test_site_url()
+    public function testSiteUrl()
     {
         $actual = $this->twig->render('site_url');
-//		$expected = 'http://localhost/index.php/&quot;&gt;&lt;s&gt;abc&lt;/s&gt;&lt;a name=&quot;test'; // CI3
         $expected = 'http://localhost/index.php/%22%3E%3Cs%3Eabc%3C/s%3E%3Ca%20name=%22test';
         $this->assertEquals($expected, $actual);
     }

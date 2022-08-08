@@ -21,12 +21,12 @@ class Twig
     /**
     * @var array Paths to Twig templates
     */
-    private $paths = [ APPPATH . 'Views' ];
+    private array $paths = [ APPPATH . 'Views' ];
     
     /**
     * @var array Functions to add to Twig
     */
-    private $functions_asis = [ 'base_url', 'site_url' ];
+    private array $functions_asis = [ 'base_url', 'site_url' ];
 
     /**
      * @var array Functions with `is_safe` option
@@ -40,31 +40,35 @@ class Twig
     * @var array Twig Environment Options
     * @see http://twig.sensiolabs.org/doc/api.html#environment-options
     */
-    private $config = [];
+    private array $config = [];
 
     
     /**
     * @var bool Whether functions are added or not
     */
-    private $functions_added = FALSE;
+    private bool $functions_added = false;
 
     /**
-     * @var Twig_Environment
+     * @var \Twig\Environment
      */
-    private $twig;
+    private ?\Twig\Environment $twig = null;
 
     /**
-     * @var Twig_Loader_Filesystem
+     * @var \Twig\Loader\FilesystemLoader
      */
-    private $loader;
+    private ?\Twig\Loader\LoaderInterface $loader = null;
     
     /**
      * @var string
      */
-    private $ext = '.twig';
-    
+    private string $ext = '.twig';
     
     public function __construct( BaseConfig $config = null )
+    {
+        $this->initialize($config);
+    }
+
+    public function initialize( BaseConfig $config = null )
     {
         if( empty( $config ) )
         {
@@ -86,8 +90,6 @@ class Twig
             $this->paths = array_unique( array_merge( $this->paths, $config->paths ) );
         }
 
-        //$this->paths = ( isset( $config->paths ) ) ? $config->paths : APPPATH . 'Views';
-        
         // default Twig config
         $this->config = [
             'cache'      => WRITEPATH . 'cache' . DIRECTORY_SEPARATOR . 'twig',
@@ -96,7 +98,7 @@ class Twig
         ];
     }
     
-    protected function resetTwig()
+    public function resetTwig( BaseConfig $config = null )
     {
         $this->twig = null;
         $this->createTwig();
@@ -124,7 +126,7 @@ class Twig
 
         $this->twig = $twig;
     }
-    
+
     protected function setLoader($loader)
     {
         $this->loader = $loader;
@@ -197,7 +199,10 @@ class Twig
 
         return anchor( $uri, $title, $new_attr );
     }
-        
+    
+    /**
+     * @codeCoverageIgnore
+     */
     public function validation_list_errors(): string
     {
         return \Config\Services::validation()->listErrors();
@@ -240,19 +245,12 @@ class Twig
     */
     public function render( string $view, array $params = [] ): string
     {
-        try
-        {
-            $this->createTwig();
-            // We call addFunctions() here, because we must call addFunctions()
-            // after loading CodeIgniter functions in a controller.
-            $this->addFunctions();
-            
-            $view = $view . '.twig';
-            return $this->twig->render( $view, $params );
-        } 
-        catch( Twig_Error_Loader $error_Loader ) 
-        {
-            throw new PageNotFoundException($error_Loader);
-        }
+        $this->createTwig();
+        // We call addFunctions() here, because we must call addFunctions()
+        // after loading CodeIgniter functions in a controller.
+        $this->addFunctions();
+        
+        $view = $view . '.twig';
+        return $this->twig->render( $view, $params );
     }
 }
