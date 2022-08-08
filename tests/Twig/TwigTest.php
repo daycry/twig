@@ -107,7 +107,7 @@ class TwigTest extends CIUnitTestCase
         $this->assertTrue($this->getPrivateProperty($this->twig, 'functions_added'));
 
         // Calls render() twice
-        $output = $this->twig->render('Welcome', $data);
+        $output = $this->twig->render('welcome', $data);
 
         $this->assertEquals('Hello CodeIgniter!' . "\n", $output);
         $this->assertTrue($this->getPrivateProperty($this->twig, 'functions_added'));
