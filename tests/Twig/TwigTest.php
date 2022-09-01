@@ -116,7 +116,6 @@ class TwigTest extends CIUnitTestCase
     public function testFunctionAsIs()
     {
         $output = $this->twig->render('functions_asis');
-
         $this->assertEquals('900150983cd24fb0d6963f7d28e17f72' . "\n", $output);
     }
 
