@@ -8,8 +8,8 @@ use Daycry\Twig\Config\Twig as TwigConfig;
 
 class TwigHelperTest extends CIUnitTestCase
 {
-    private Twig $twig;
-    private TwigConfig $config;
+    private $twig;
+    private $config;
 
     protected function setUp(): void
     {
