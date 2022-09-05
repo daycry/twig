@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests;
+namespace Tests\Twig;
 
 use CodeIgniter\Test\CIUnitTestCase;
 

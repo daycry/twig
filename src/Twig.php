@@ -83,7 +83,7 @@ class Twig
         ];
     }
 
-    public function resetTwig(?BaseConfig $config = null)
+    public function resetTwig()
     {
         $this->twig = null;
         $this->createTwig();
