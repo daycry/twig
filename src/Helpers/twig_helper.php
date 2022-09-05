@@ -1,15 +1,15 @@
 <?php
 
-use Daycry\Twig\Twig;
+use Daycry\Twig\Config\Services;
 
 if (! function_exists('twig_instance')) {
     /**
      * load twig
      *
-     * @return Daycry\Twig\Twig
+     * @return \Daycry\Twig\Twig
      */
     function twig_instance()
     {
-        return \Daycry\Twig\Config\Services::twig();
+        return Services::twig();
     }
 }

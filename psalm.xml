@@ -12,9 +12,8 @@
         <directory name="src/" />
         <ignoreFiles>
             <directory name="vendor" />
-            <file name="src/ide/phpstorm/.phpstorm.meta.php" />
-            <file name="src/Template/composer-unused.php" />
-            <file name="src/Template/psalm_autoload.php" />
+            <file name="composer-unused.php" />
+            <file name="psalm_autoload.php" />
         </ignoreFiles>
     </projectFiles>
 </psalm>

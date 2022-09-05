@@ -2,20 +2,23 @@
 
 namespace Tests\Twig;
 
+use Daycry\Twig\Config\Twig;
+use Twig\Environment;
+use Daycry\Twig\Config\Services;
 use CodeIgniter\Test\CIUnitTestCase;
 
 class TwigTest extends CIUnitTestCase
 {
-    protected \Daycry\Twig\Config\Twig $config;
+    protected Twig $config;
     protected \Daycry\Twig\Twig $twig;
     
     protected function setUp(): void
     {
-        helper(array('url', 'form', 'twig_helper'));
+        helper(['url', 'form', 'twig_helper']);
 
         parent::setUp();
 
-        $this->config = new \Daycry\Twig\Config\Twig();
+        $this->config = new Twig();
         $this->config->paths = [ './tests/_support/templates/' ];
         $this->config->functions_asis = [ 'md5' ];
 
@@ -31,29 +34,29 @@ class TwigTest extends CIUnitTestCase
     {
         $this->twig = new \Daycry\Twig\Twig();
 
-        $this->assertInstanceOf( \Twig\Environment::class, $this->twig->getTwig());
+        $this->assertInstanceOf( Environment::class, $this->twig->getTwig());
         $this->assertCount( 1, $this->twig->getPaths());
     }
 
     public function testConstructCustomConfig()
     {
-        $this->assertInstanceOf( \Twig\Environment::class, $this->twig->getTwig());
+        $this->assertInstanceOf( Environment::class, $this->twig->getTwig());
         $this->assertCount( 2, $this->twig->getPaths());
     }
 
     public function testConstructAsAService()
     {
-        $this->twig = \Daycry\Twig\Config\Services::twig(null, false);
+        $this->twig = Services::twig(null, false);
 
-        $this->assertInstanceOf( \Twig\Environment::class, $this->twig->getTwig());
+        $this->assertInstanceOf( Environment::class, $this->twig->getTwig());
         $this->assertCount( 1, $this->twig->getPaths());
     }
 
     public function testConstructAsAServiceCustomConfig()
     {
-        $this->twig = \Daycry\Twig\Config\Services::twig( $this->config, false );
+        $this->twig = Services::twig( $this->config, false );
 
-        $this->assertInstanceOf( \Twig\Environment::class, $this->twig->getTwig());
+        $this->assertInstanceOf( Environment::class, $this->twig->getTwig());
         $this->assertCount( 2, $this->twig->getPaths());
     }
 
@@ -61,7 +64,7 @@ class TwigTest extends CIUnitTestCase
     {
         $this->twig = twig_instance();
 
-        $this->assertInstanceOf( \Twig\Environment::class, $this->twig->getTwig());
+        $this->assertInstanceOf( Environment::class, $this->twig->getTwig());
         $this->assertCount( 1, $this->twig->getPaths());
     }
 

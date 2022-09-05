@@ -2,6 +2,7 @@
 
 namespace Tests\Twig;
 
+use Twig\Loader\ArrayLoader;
 use CodeIgniter\Test\CIUnitTestCase;
 use Daycry\Twig\Twig;
 use Daycry\Twig\Config\Twig as TwigConfig;
@@ -13,7 +14,7 @@ class TwigHelperTest extends CIUnitTestCase
 
     protected function setUp(): void
     {
-        helper(array('url'));
+        helper(['url']);
 
         parent::setUp();
 
@@ -23,7 +24,7 @@ class TwigHelperTest extends CIUnitTestCase
 
         $this->twig = new Twig( $this->config );
 
-        $loader = new \Twig\Loader\ArrayLoader(
+        $loader = new ArrayLoader(
             [
                 'base_url' => '{{ base_url(\'"><s>abc</s><a name="test\') }}',
                 'site_url' => '{{ site_url(\'"><s>abc</s><a name="test\') }}',

@@ -1,4 +1,5 @@
 <?php
+namespace Tests\Support\functions;
 
 function functionSafe(): string
 {
