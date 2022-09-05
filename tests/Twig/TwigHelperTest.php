@@ -3,10 +3,13 @@
 namespace Tests\Twig;
 
 use CodeIgniter\Test\CIUnitTestCase;
+use Daycry\Twig\Twig;
+use Daycry\Twig\Config\Twig as TwigConfig;
 
 class TwigHelperTest extends CIUnitTestCase
 {
-    private $twig;
+    private Twig $twig;
+    private TwigConfig $config;
 
     protected function setUp(): void
     {
@@ -14,11 +17,11 @@ class TwigHelperTest extends CIUnitTestCase
 
         parent::setUp();
 
-        $this->config = new \Daycry\Twig\Config\Twig();
+        $this->config = new TwigConfig();
         $this->config->paths = [ './tests/_support/templates/' ];
         $this->config->functions_asis = [ 'md5' ];
 
-        $this->twig = new \Daycry\Twig\Twig( $this->config );
+        $this->twig = new Twig( $this->config );
 
         $loader = new \Twig\Loader\ArrayLoader(
             [

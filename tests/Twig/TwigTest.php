@@ -43,7 +43,7 @@ class TwigTest extends CIUnitTestCase
 
     public function testConstructAsAService()
     {
-        $this->twig = \Config\Services::twig(null, false);
+        $this->twig = \Daycry\Twig\Config\Services::twig(null, false);
 
         $this->assertInstanceOf( \Twig\Environment::class, $this->twig->getTwig());
         $this->assertCount( 1, $this->twig->getPaths());
@@ -51,7 +51,7 @@ class TwigTest extends CIUnitTestCase
 
     public function testConstructAsAServiceCustomConfig()
     {
-        $this->twig = \Config\Services::twig( $this->config, false );
+        $this->twig = \Daycry\Twig\Config\Services::twig( $this->config, false );
 
         $this->assertInstanceOf( \Twig\Environment::class, $this->twig->getTwig());
         $this->assertCount( 2, $this->twig->getPaths());
@@ -122,7 +122,6 @@ class TwigTest extends CIUnitTestCase
     public function testFunctionSafe()
     {
         $this->config->functions_safe = [ 'functionSafe' ];
-        $this->config->cache = false;
 
         $this->twig->initialize( $this->config );
 
