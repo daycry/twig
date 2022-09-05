@@ -50,8 +50,6 @@ class Twig
      */
     private ?\Twig\Loader\LoaderInterface $loader = null;
 
-    private string $ext = '.twig';
-
     public function __construct(?TwigConfig $config = null)
     {
         $this->initialize($config);

@@ -1,5 +1,7 @@
 <?php
 
+use Daycry\Twig\Twig;
+
 if (! function_exists('twig_instance')) {
     /**
      * load twig
@@ -8,6 +10,6 @@ if (! function_exists('twig_instance')) {
      */
     function twig_instance()
     {
-        return \CodeIgniter\Config\Services::twig();
+        return \Daycry\Twig\Config\Services::twig();
     }
 }
