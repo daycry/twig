@@ -46,9 +46,6 @@ class Twig
      */
     private bool $functions_added = false;
 
-    /**
-     * @var \Twig\Environment
-     */
     private ?Environment $twig = null;
 
     /**

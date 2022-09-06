@@ -6,7 +6,7 @@ if (! function_exists('twig_instance')) {
     /**
      * load twig
      *
-     * @return \Daycry\Twig\Twig
+     * @return Twig
      */
     function twig_instance()
     {
