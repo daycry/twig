@@ -2,15 +2,16 @@
 
 namespace Tests\Twig;
 
-use Daycry\Twig\Config\Twig;
+use Daycry\Twig\Config\Twig as TwigConfig;
 use Twig\Environment;
 use Daycry\Twig\Config\Services;
 use CodeIgniter\Test\CIUnitTestCase;
+use Daycry\Twig\Twig;
 
 class TwigTest extends CIUnitTestCase
 {
-    protected Twig $config;
-    protected \Daycry\Twig\Twig $twig;
+    protected TwigConfig $config;
+    protected Twig $twig;
     
     protected function setUp(): void
     {
@@ -18,11 +19,11 @@ class TwigTest extends CIUnitTestCase
 
         parent::setUp();
 
-        $this->config = new Twig();
+        $this->config = new TwigConfig();
         $this->config->paths = [ './tests/_support/templates/' ];
         $this->config->functions_asis = [ 'md5' ];
 
-        $this->twig = new \Daycry\Twig\Twig( $this->config );
+        $this->twig = new Twig( $this->config );
     }
 
     public static function setUpBeforeClass(): void
@@ -32,7 +33,7 @@ class TwigTest extends CIUnitTestCase
 
     public function testConstructDefault()
     {
-        $this->twig = new \Daycry\Twig\Twig();
+        $this->twig = new Twig();
 
         $this->assertInstanceOf( Environment::class, $this->twig->getTwig());
         $this->assertCount( 1, $this->twig->getPaths());
