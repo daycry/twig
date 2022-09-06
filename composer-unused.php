@@ -12,4 +12,7 @@ return static fn (Configuration $config): Configuration => $config
     // ->addPatternFilter(PatternFilter::fromString('/symfony-.*/'))
     ->setAdditionalFilesFor('codeigniter4/framework', [
         ...Glob::glob(__DIR__ . '/vendor/codeigniter4/framework/system/Helpers/*.php'),
+    ])
+    ->setAdditionalFilesFor('twig/twig', [
+        ...Glob::glob(__DIR__ . '/vendor/twig/twig/src/*.php'),
     ]);
