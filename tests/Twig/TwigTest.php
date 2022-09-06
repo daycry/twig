@@ -1,25 +1,29 @@
 <?php
 
-namespace Tests;
+namespace Tests\Twig;
 
+use Daycry\Twig\Config\Twig as TwigConfig;
+use Twig\Environment;
+use Daycry\Twig\Config\Services;
 use CodeIgniter\Test\CIUnitTestCase;
+use Daycry\Twig\Twig;
 
 class TwigTest extends CIUnitTestCase
 {
-    protected \Daycry\Twig\Config\Twig $config;
-    protected \Daycry\Twig\Twig $twig;
+    protected TwigConfig $config;
+    protected Twig $twig;
     
     protected function setUp(): void
     {
-        helper(array('url', 'form', 'twig_helper'));
+        helper(['url', 'form', 'twig_helper']);
 
         parent::setUp();
 
-        $this->config = new \Daycry\Twig\Config\Twig();
+        $this->config = new TwigConfig();
         $this->config->paths = [ './tests/_support/templates/' ];
         $this->config->functions_asis = [ 'md5' ];
 
-        $this->twig = new \Daycry\Twig\Twig( $this->config );
+        $this->twig = new Twig( $this->config );
     }
 
     public static function setUpBeforeClass(): void
@@ -29,31 +33,31 @@ class TwigTest extends CIUnitTestCase
 
     public function testConstructDefault()
     {
-        $this->twig = new \Daycry\Twig\Twig();
+        $this->twig = new Twig();
 
-        $this->assertInstanceOf( \Twig\Environment::class, $this->twig->getTwig());
+        $this->assertInstanceOf( Environment::class, $this->twig->getTwig());
         $this->assertCount( 1, $this->twig->getPaths());
     }
 
     public function testConstructCustomConfig()
     {
-        $this->assertInstanceOf( \Twig\Environment::class, $this->twig->getTwig());
+        $this->assertInstanceOf( Environment::class, $this->twig->getTwig());
         $this->assertCount( 2, $this->twig->getPaths());
     }
 
     public function testConstructAsAService()
     {
-        $this->twig = \Config\Services::twig(null, false);
+        $this->twig = Services::twig(null, false);
 
-        $this->assertInstanceOf( \Twig\Environment::class, $this->twig->getTwig());
+        $this->assertInstanceOf( Environment::class, $this->twig->getTwig());
         $this->assertCount( 1, $this->twig->getPaths());
     }
 
     public function testConstructAsAServiceCustomConfig()
     {
-        $this->twig = \Config\Services::twig( $this->config, false );
+        $this->twig = Services::twig( $this->config, false );
 
-        $this->assertInstanceOf( \Twig\Environment::class, $this->twig->getTwig());
+        $this->assertInstanceOf( Environment::class, $this->twig->getTwig());
         $this->assertCount( 2, $this->twig->getPaths());
     }
 
@@ -61,7 +65,7 @@ class TwigTest extends CIUnitTestCase
     {
         $this->twig = twig_instance();
 
-        $this->assertInstanceOf( \Twig\Environment::class, $this->twig->getTwig());
+        $this->assertInstanceOf( Environment::class, $this->twig->getTwig());
         $this->assertCount( 1, $this->twig->getPaths());
     }
 
@@ -122,7 +126,6 @@ class TwigTest extends CIUnitTestCase
     public function testFunctionSafe()
     {
         $this->config->functions_safe = [ 'functionSafe' ];
-        $this->config->cache = false;
 
         $this->twig->initialize( $this->config );
 

@@ -1,13 +1,16 @@
 <?php
 
+use Daycry\Twig\Config\Services;
+use Daycry\Twig\Twig;
+
 if (! function_exists('twig_instance')) {
     /**
      * load twig
      *
-     * @return class
+     * @return Twig
      */
     function twig_instance()
     {
-        return \CodeIgniter\Config\Services::twig();
+        return Services::twig();
     }
 }

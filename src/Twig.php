@@ -2,7 +2,13 @@
 
 namespace Daycry\Twig;
 
+use Config\Services;
 use Daycry\Twig\Config\Twig as TwigConfig;
+use Twig\Environment;
+use Twig\Extension\DebugExtension;
+use Twig\Loader\FilesystemLoader;
+use Twig\Loader\LoaderInterface;
+use Twig\TwigFunction;
 
 /**
  * Class General
@@ -24,7 +30,7 @@ class Twig
      *
      * @see http://twig.sensiolabs.org/doc/advanced.html#automatic-escaping
      */
-    private $functions_safe = [
+    private array $functions_safe = [
         'form_open', 'form_close', 'form_error', 'form_hidden', 'set_value',
     ];
 
@@ -40,17 +46,12 @@ class Twig
      */
     private bool $functions_added = false;
 
-    /**
-     * @var \Twig\Environment
-     */
-    private ?\Twig\Environment $twig = null;
+    private ?Environment $twig = null;
 
     /**
-     * @var \Twig\Loader\FilesystemLoader
+     * @class \Twig\Loader\FilesystemLoader
      */
-    private ?\Twig\Loader\LoaderInterface $loader = null;
-
-    private string $ext = '.twig';
+    private ?LoaderInterface $loader = null;
 
     public function __construct(?TwigConfig $config = null)
     {
@@ -83,7 +84,7 @@ class Twig
         ];
     }
 
-    public function resetTwig(?BaseConfig $config = null)
+    public function resetTwig()
     {
         $this->twig = null;
         $this->createTwig();
@@ -97,13 +98,13 @@ class Twig
         }
 
         if ($this->loader === null) {
-            $this->loader = new \Twig\Loader\FilesystemLoader($this->paths);
+            $this->loader = new FilesystemLoader($this->paths);
         }
 
-        $twig = new \Twig\Environment($this->loader, $this->config);
+        $twig = new Environment($this->loader, $this->config);
 
         if ($this->config['debug']) {
-            $twig->addExtension(new \Twig\Extension\DebugExtension());
+            $twig->addExtension(new DebugExtension());
         }
 
         $this->twig = $twig;
@@ -136,23 +137,23 @@ class Twig
         // as is functions
         foreach ($this->functions_asis as $function) {
             if (function_exists($function)) {
-                $this->twig->addFunction(new \Twig\TwigFunction($function, $function));
+                $this->twig->addFunction(new TwigFunction($function, $function));
             }
         }
 
         // safe functions
         foreach ($this->functions_safe as $function) {
             if (function_exists($function)) {
-                $this->twig->addFunction(new \Twig\TwigFunction($function, $function, ['is_safe' => ['html']]));
+                $this->twig->addFunction(new TwigFunction($function, $function, ['is_safe' => ['html']]));
             }
         }
 
         // customized functions
         if (function_exists('anchor')) {
-            $this->twig->addFunction(new \Twig\TwigFunction('anchor', [$this, 'safe_anchor'], ['is_safe' => ['html']]));
+            $this->twig->addFunction(new TwigFunction('anchor', [$this, 'safe_anchor'], ['is_safe' => ['html']]));
         }
 
-        $this->twig->addFunction(new \Twig\TwigFunction('validation_list_errors', [$this, 'validation_list_errors'], ['is_safe' => ['html']]));
+        $this->twig->addFunction(new TwigFunction('validation_list_errors', [$this, 'validation_list_errors'], ['is_safe' => ['html']]));
 
         $this->functions_added = true;
     }
@@ -181,10 +182,10 @@ class Twig
      */
     public function validation_list_errors(): string
     {
-        return \Config\Services::validation()->listErrors();
+        return Services::validation()->listErrors();
     }
 
-    public function getTwig(): \Twig\Environment
+    public function getTwig(): Environment
     {
         $this->createTwig();
 
