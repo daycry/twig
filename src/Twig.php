@@ -2,13 +2,13 @@
 
 namespace Daycry\Twig;
 
-use Twig\Environment;
-use Twig\Loader\LoaderInterface;
-use Twig\Loader\FilesystemLoader;
-use Twig\Extension\DebugExtension;
-use Twig\TwigFunction;
 use Config\Services;
 use Daycry\Twig\Config\Twig as TwigConfig;
+use Twig\Environment;
+use Twig\Extension\DebugExtension;
+use Twig\Loader\FilesystemLoader;
+use Twig\Loader\LoaderInterface;
+use Twig\TwigFunction;
 
 /**
  * Class General
