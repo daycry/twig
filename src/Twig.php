@@ -82,6 +82,8 @@ class Twig
             'debug'      => ENVIRONMENT !== 'production',
             'autoescape' => 'html',
         ];
+        
+        return $this;
     }
 
     public function resetTwig()
