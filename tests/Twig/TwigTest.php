@@ -89,6 +89,28 @@ class TwigTest extends CIUnitTestCase
         $this->expectOutputString('Hello CodeIgniter!' . "\n");
     }
 
+    public function testCreateTemplate()
+    {
+        $data = [
+            'name' => 'CodeIgniter',
+        ];
+
+        echo $this->twig->createTemplate('Hello {{ name }}!', $data, false);
+
+        $this->expectOutputString('Hello CodeIgniter!');
+    }
+
+    public function testCreateTemplateDsiplay()
+    {
+        $data = [
+            'name' => 'CodeIgniter',
+        ];
+
+        $this->twig->createTemplate('Hello {{ name }}!', $data, true);
+
+        $this->expectOutputString('Hello CodeIgniter!');
+    }
+
     public function testAddGlobal()
     {
         $this->twig->addGlobal('sitename', 'Global');

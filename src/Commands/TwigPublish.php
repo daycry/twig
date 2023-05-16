@@ -20,7 +20,7 @@ class TwigPublish extends BaseCommand
      */
     protected $sourcePath;
 
-    //--------------------------------------------------------------------
+    // --------------------------------------------------------------------
     /**
      * Copy config file
      */
@@ -31,7 +31,7 @@ class TwigPublish extends BaseCommand
         CLI::write('Config file was successfully generated.', 'green');
     }
 
-    //--------------------------------------------------------------------
+    // --------------------------------------------------------------------
     /**
      * Determines the current source path from which all other files are located.
      */
@@ -45,7 +45,7 @@ class TwigPublish extends BaseCommand
         }
     }
 
-    //--------------------------------------------------------------------
+    // --------------------------------------------------------------------
     /**
      * Publish config file.
      */
@@ -58,7 +58,7 @@ class TwigPublish extends BaseCommand
         $this->writeFile('Config/Twig.php', $content);
     }
 
-    //--------------------------------------------------------------------
+    // --------------------------------------------------------------------
     /**
      * Write a file, catching any exceptions and showing a nicely formatted error.
      */
@@ -86,5 +86,5 @@ class TwigPublish extends BaseCommand
         $path = str_replace($appPath, '', $path);
         CLI::write(CLI::color('Created: ', 'yellow') . $path);
     }
-    //--------------------------------------------------------------------
+    // --------------------------------------------------------------------
 }

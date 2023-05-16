@@ -82,7 +82,7 @@ class Twig
             'debug'      => ENVIRONMENT !== 'production',
             'autoescape' => 'html',
         ];
-        
+
         return $this;
     }
 
@@ -112,7 +112,7 @@ class Twig
         $this->twig = $twig;
     }
 
-    public function setLoader($loader)
+    protected function setLoader($loader)
     {
         $this->loader = $loader;
     }
@@ -229,5 +229,22 @@ class Twig
         $view = $view . '.twig';
 
         return $this->twig->render($view, $params);
+    }
+
+    public function createTemplate(string $template, array $params = [], bool $display = false)
+    {
+        $this->createTwig();
+        // We call addFunctions() here, because we must call addFunctions()
+        // after loading CodeIgniter functions in a controller.
+        $this->addFunctions();
+
+        $template = $this->twig->createTemplate($template);
+
+        if( !$display )
+        {
+            return $template->render($params);
+        }
+        
+        echo $template->render($params);
     }
 }
