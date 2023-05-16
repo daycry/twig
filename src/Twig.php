@@ -112,7 +112,7 @@ class Twig
         $this->twig = $twig;
     }
 
-    protected function setLoader($loader)
+    public function setLoader($loader)
     {
         $this->loader = $loader;
     }
