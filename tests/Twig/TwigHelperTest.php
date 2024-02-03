@@ -4,8 +4,8 @@ namespace Tests\Twig;
 
 use Twig\Loader\ArrayLoader;
 use CodeIgniter\Test\CIUnitTestCase;
-use Daycry\Twig\Twig;
-use Daycry\Twig\Config\Twig as TwigConfig;
+use KaleidPixel\Codeigniter4Twig\Twig;
+use KaleidPixel\Codeigniter4Twig\Config\Twig as TwigConfig;
 
 class TwigHelperTest extends CIUnitTestCase
 {

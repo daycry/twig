@@ -1,11 +1,11 @@
 <?php
 
-namespace Daycry\Twig;
+namespace KaleidPixel\Codeigniter4Twig;
 
 use CodeIgniter\Filters\DebugToolbar;
 use Config\Services;
 use Config\Toolbar;
-use Daycry\Twig\Config\Twig as TwigConfig;
+use KaleidPixel\Codeigniter4Twig\Config\Twig as TwigConfig;
 use Twig\Environment;
 use Twig\Extension\DebugExtension;
 use Twig\Loader\FilesystemLoader;

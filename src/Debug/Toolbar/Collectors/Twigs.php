@@ -12,8 +12,8 @@
 namespace App\Debug\Toolbar\Collectors;
 
 use CodeIgniter\Debug\Toolbar\Collectors\BaseCollector;
-use Daycry\Twig\Config\Services;
-use Daycry\Twig\Twig;
+use KaleidPixel\Codeigniter4Twig\Config\Services;
+use KaleidPixel\Codeigniter4Twig\Twig;
 
 /**
  * Twigs collector

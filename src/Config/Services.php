@@ -1,11 +1,10 @@
 <?php
 
-namespace Daycry\Twig\Config;
+namespace KaleidPixel\Codeigniter4Twig\Config;
 
 use CodeIgniter\Config\BaseService;
-use Daycry\Twig\Config\Twig as TwigConfig;
-
-use Daycry\Twig\Twig;
+use KaleidPixel\Codeigniter4Twig\Config\Twig as TwigConfig;
+use KaleidPixel\Codeigniter4Twig\Twig;
 
 class Services extends BaseService
 {

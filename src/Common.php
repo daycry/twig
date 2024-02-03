@@ -1,7 +1,7 @@
 <?php
 
 use Config\Services;
-use Daycry\Twig\Config\Services AS TwigServices;
+use KaleidPixel\Codeigniter4Twig\Config\Services AS TwigServices;
 
 if (! function_exists('view')) {
     /**
