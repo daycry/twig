@@ -1,6 +1,6 @@
 <?php
 
-namespace Daycry\Twig\Config;
+namespace KaleidPixel\Codeigniter4Twig\Config;
 
 use CodeIgniter\Config\BaseConfig;
 

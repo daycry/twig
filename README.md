@@ -1,27 +1,30 @@
-[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate?business=SYC5XDT23UZ5G&no_recurring=0&item_name=Thank+you%21&currency_code=EUR)
+# Introduction
+This library is a fork of daycry/twig, published by Mr. daycry, with a few added functionalities. We would like to express our gratitude to Mr. daycry. The added features are as follows:
 
-# Twig, the flexible, fast, and secure template language for Codeigniter 4
+- Added Toolbar Collectors to enable the function of the View column in the Toolbar.
+
+## Twig, the flexible, fast, and secure template language for Codeigniter 4
 
 Twig is a template language for PHP.
 
 Twig uses a syntax similar to the Django and Jinja template languages which inspired the Twig runtime environment.
 
-[![Build Status](https://github.com/daycry/twig/workflows/PHP%20Tests/badge.svg)](https://github.com/daycry/twig/actions?query=workflow%3A%22PHP+Tests%22)
-[![Coverage Status](https://coveralls.io/repos/github/daycry/twig/badge.svg?branch=master)](https://coveralls.io/github/daycry/twig?branch=master)
-[![Downloads](https://poser.pugx.org/daycry/twig/downloads)](https://packagist.org/packages/daycry/twig)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/daycry/twig)](https://packagist.org/packages/daycry/twig)
-[![GitHub stars](https://img.shields.io/github/stars/daycry/twig)](https://packagist.org/packages/daycry/twig)
-[![GitHub license](https://img.shields.io/github/license/daycry/twig)](https://github.com/daycry/twig/blob/master/LICENSE)
+[![Build Status](https://github.com/kaleidpixel/codeigniter4-twig/workflows/PHP%20Tests/badge.svg)](https://github.com/kaleidpixel/codeigniter4-twig/actions?query=workflow%3A%22PHP+Tests%22)
+[![Coverage Status](https://coveralls.io/repos/github/kaleidpixel/codeigniter4-twig/badge.svg?branch=master)](https://coveralls.io/github/kaleidpixel/codeigniter4-twig?branch=master)
+[![Downloads](https://poser.pugx.org/kaleidpixel/codeigniter4-twig/downloads)](https://packagist.org/packages/kaleidpixel/codeigniter4-twig)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/kaleidpixel/codeigniter4-twig)](https://packagist.org/packages/kaleidpixel/codeigniter4-twig)
+[![GitHub stars](https://img.shields.io/github/stars/kaleidpixel/codeigniter4-twig)](https://packagist.org/packages/kaleidpixel/codeigniter4-twig)
+[![GitHub license](https://img.shields.io/github/license/kaleidpixel/codeigniter4-twig)](https://github.com/kaleidpixel/codeigniter4-twig/blob/master/LICENSE)
 
 ## Installation via composer
 
 Use the package with composer install
 
-	> composer require daycry/twig
+	> composer require kaleidpixel/codeigniter4-twig
 
 ## Manual installation
 
-Download this repo and then enable it by editing **app/Config/Autoload.php** and adding the **Daycry\Twig**
+Download this repo and then enable it by editing **app/Config/Autoload.php** and adding the **KaleidPixel\Codeigniter4Twig**
 namespace to the **$psr4** array. For example, if you copied it into **app/ThirdParty**:
 
 ```php
@@ -29,7 +32,7 @@ $psr4 = [
     'Config'      => APPPATH . 'Config',
     APP_NAMESPACE => APPPATH,
     'App'         => APPPATH,
-    'Daycry\Twig' => APPPATH .'ThirdParty/twig/src',
+    'KaleidPixel\Codeigniter4Twig' => APPPATH .'ThirdParty/twig/src',
 ];
 ```
 
@@ -46,7 +49,7 @@ Then you can adjust it to your needs. By default file will be present in `app/Co
 ## Usage Loading Library
 
 ```php
-$twig = new \Daycry\Twig\Twig();
+$twig = new \KaleidPixel\Codeigniter4Twig\Twig();
 $twig->display( 'file.html', [] );
 
 ```
@@ -71,7 +74,6 @@ protected $helpers = [ 'twig_helper' ];
 And then you can use the helper
 
 ```php
-
 $twig = twig_instance();
 $twig->display( 'file.html', [] );
 
@@ -80,7 +82,7 @@ $twig->display( 'file.html', [] );
 ## Add Globals
 
 ```php
-$twig = new \Daycry\Twig\Twig();
+$twig = new \KaleidPixel\Codeigniter4Twig\Twig();
 
 $session = \Config\Services::session();
 $session->set( array( 'name' => 'Daycry' ) );
@@ -91,8 +93,7 @@ $twig->display( 'file.html', [] );
 
 ## File Example
 
-```php
-
+```html
 <!DOCTYPE html>
 <html lang="es">  
     <head>    
@@ -111,8 +112,8 @@ $twig->display( 'file.html', [] );
 
 ## How Run Tests
 
-```php
-cd vendor\daycry\twig\
+```bash
+cd vendor\KaleidPixel\Codeigniter4Twig\
 composer install
 vendor\bin\phpunit
 

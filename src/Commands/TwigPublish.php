@@ -1,6 +1,6 @@
 <?php
 
-namespace Daycry\Twig\Commands;
+namespace KaleidPixel\Codeigniter4Twig\Commands;
 
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
@@ -14,7 +14,7 @@ class TwigPublish extends BaseCommand
     protected $description = 'Twig config file publisher.';
 
     /**
-     * The path to Daycry\Twig\src directory.
+     * The path to KaleidPixel\Codeigniter4Twig\src directory.
      *
      * @var string
      */
@@ -53,9 +53,13 @@ class TwigPublish extends BaseCommand
     {
         $path    = "{$this->sourcePath}/Config/Twig.php";
         $content = file_get_contents($path);
-        $content = str_replace('namespace Daycry\Twig\Config', 'namespace Config', $content);
-        $content = str_replace('extends BaseConfig', 'extends \\Daycry\\Twig\\Config\\Twig', $content);
+        $content = str_replace('namespace KaleidPixel\Codeigniter4Twig\Config', 'namespace Config', $content);
+        $content = str_replace('extends BaseConfig', 'extends \\KaleidPixel\\Codeigniter4Twig\\Config\\Twig', $content);
         $this->writeFile('Config/Twig.php', $content);
+
+		$path    = "{$this->sourcePath}/Debug/Toolbar/Collectors/Twigs.php";
+		$content = file_get_contents($path);
+		$this->writeFile('Debug/Toolbar/Collectors/Twigs.php', $content);
     }
 
     // --------------------------------------------------------------------

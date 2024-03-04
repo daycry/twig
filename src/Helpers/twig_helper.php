@@ -1,7 +1,7 @@
 <?php
 
-use Daycry\Twig\Config\Services;
-use Daycry\Twig\Twig;
+use KaleidPixel\Codeigniter4Twig\Config\Services;
+use KaleidPixel\Codeigniter4Twig\Twig;
 
 if (! function_exists('twig_instance')) {
     /**
