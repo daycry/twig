@@ -2,8 +2,11 @@
 
 namespace Daycry\Twig;
 
+use CodeIgniter\Filters\DebugToolbar;
 use Config\Services;
+use Config\Toolbar;
 use Daycry\Twig\Config\Twig as TwigConfig;
+use Daycry\Twig\Debug\Toolbar\Collectors\Twig as CollectorsTwig;
 use Twig\Environment;
 use Twig\Extension\DebugExtension;
 use Twig\Loader\FilesystemLoader;
@@ -53,6 +56,11 @@ class Twig
      */
     private ?LoaderInterface $loader = null;
 
+    protected array $performanceData = [];
+    protected bool $debug = false;
+    protected array $data = [];
+    protected array $tempData = [];
+
     public function __construct(?TwigConfig $config = null)
     {
         $this->initialize($config);
@@ -61,8 +69,11 @@ class Twig
     public function initialize(?TwigConfig $config = null)
     {
         if (empty($config)) {
+            /** @var TwigConfig $config */
             $config = config('Twig');
         }
+
+        $this->debug = (ENVIRONMENT !== 'production') ? true : false;
 
         if (isset($config->functions_asis)) {
             $this->functions_asis = array_unique(array_merge($this->functions_asis, $config->functions_asis));
@@ -79,7 +90,7 @@ class Twig
         // default Twig config
         $this->config = [
             'cache'      => WRITEPATH . 'cache' . DIRECTORY_SEPARATOR . 'twig',
-            'debug'      => ENVIRONMENT !== 'production',
+            'debug'      => $this->debug,
             'autoescape' => 'html',
         ];
 
@@ -105,7 +116,7 @@ class Twig
 
         $twig = new Environment($this->loader, $this->config);
 
-        if ($this->config['debug']) {
+        if ($this->debug) {
             $twig->addExtension(new DebugExtension());
         }
 
@@ -221,6 +232,12 @@ class Twig
      */
     public function render(string $view, array $params = []): string
     {
+        $start = microtime(true);
+        $data  = esc($params, 'raw');
+
+        $this->tempData ??= $this->data;
+        $this->tempData = array_merge($this->tempData, $data);
+        
         $this->createTwig();
         // We call addFunctions() here, because we must call addFunctions()
         // after loading CodeIgniter functions in a controller.
@@ -228,7 +245,26 @@ class Twig
 
         $view = $view . '.twig';
 
-        return $this->twig->render($view, $params);
+        $output = $this->twig->render($view, $params);
+
+        if($this->debug)
+        {
+            $this->prepareTemplateData();
+
+            $this->logPerformance($start, microtime(true), $view);
+
+            if ($this->config['debug'] && in_array(DebugToolbar::class, service('filters')->getFiltersClass()['after'], true) ) {
+                $toolbarCollectors = config(Toolbar::class)->collectors;
+    
+                if (in_array(CollectorsTwig::class, $toolbarCollectors, true)) {
+                    $output = '<!-- DEBUG-VIEW START ' . $view . ' -->' . PHP_EOL
+                        . $output . PHP_EOL
+                        . '<!-- DEBUG-VIEW ENDED ' .$view . ' -->' . PHP_EOL;
+                }
+            }
+        }
+
+        return $output;
     }
 
     public function createTemplate(string $template, array $params = [], bool $display = false)
@@ -246,5 +282,42 @@ class Twig
         }
         
         echo $template->render($params);
+    }
+
+    /**
+     * Returns the performance data that might have been collected
+     * during the execution. Used primarily in the Debug Toolbar.
+     */
+    public function getPerformanceData(): array
+    {
+        return $this->performanceData;
+    }
+
+    /**
+     * Returns the current data that will be displayed in the view.
+     */
+    public function getData(): array
+    {
+        return $this->tempData ?? $this->data;
+    }
+
+    /**
+     * Logs performance data for rendering a view.
+     *
+     * @return void
+     */
+    protected function logPerformance(float $start, float $end, string $view)
+    {
+        $this->performanceData[] = [
+            'start' => $start,
+            'end'   => $end,
+            'view'  => $view
+        ];
+    }
+
+    protected function prepareTemplateData(): void
+    {
+        $this->tempData ??= $this->data;
+        $this->data = $this->tempData;
     }
 }
