@@ -19,19 +19,6 @@ Use the package with composer install
 
 	> composer require daycry/twig
 
-## Manual installation
-
-Download this repo and then enable it by editing **app/Config/Autoload.php** and adding the **Daycry\Twig**
-namespace to the **$psr4** array. For example, if you copied it into **app/ThirdParty**:
-
-```php
-$psr4 = [
-    'Config'      => APPPATH . 'Config',
-    APP_NAMESPACE => APPPATH,
-    'App'         => APPPATH,
-    'Daycry\Twig' => APPPATH .'ThirdParty/twig/src',
-];
-```
 
 ## Configuration
 
@@ -109,11 +96,18 @@ $twig->display( 'file.html', [] );
 
 ```
 
-## How Run Tests
+## Collector
 
+If you want to debug the data in twig templates.
+
+Toolbar.php file
 ```php
-cd vendor\daycry\twig\
-composer install
-vendor\bin\phpunit
+
+    use Daycry\Twig\Debug\Toolbar\Collectors\Twig;
+    
+    public array $collectors = [
+        ...
+        Twig::class
+    ];
 
 ```
