@@ -6,7 +6,7 @@ Twig is a template language for PHP.
 
 Twig uses a syntax similar to the Django and Jinja template languages which inspired the Twig runtime environment.
 
-[![Build Status](https://github.com/daycry/twig/workflows/PHP%20Tests/badge.svg)](https://github.com/daycry/twig/actions?query=workflow%3A%22PHP+Tests%22)
+[![Build Status](https://github.com/daycry/twig/actions/workflows/phpunit.yml/badge.svg?branch=master)](https://github.com/daycry/twig/actions/workflows/phpunit.yml)
 [![Coverage Status](https://coveralls.io/repos/github/daycry/twig/badge.svg?branch=master)](https://coveralls.io/github/daycry/twig?branch=master)
 [![Downloads](https://poser.pugx.org/daycry/twig/downloads)](https://packagist.org/packages/daycry/twig)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/daycry/twig)](https://packagist.org/packages/daycry/twig)
