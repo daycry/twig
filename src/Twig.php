@@ -19,6 +19,13 @@ use Twig\TwigFunction;
 class Twig
 {
     /**
+     * Saved Data.
+     *
+     * @var array
+     */
+    protected array $data = [];
+
+    /**
      * @var array Paths to Twig templates
      */
     private array $paths = [APPPATH . 'Views'];
@@ -58,8 +65,9 @@ class Twig
 
     protected array $performanceData = [];
     protected bool $debug = false;
-    protected array $data = [];
-    protected array $tempData = [];
+    protected bool $saveData = true;
+    protected ?array $tempData = null;
+    protected int $viewsCount = 0;
 
     public function __construct(?TwigConfig $config = null)
     {
@@ -93,6 +101,10 @@ class Twig
             'debug'      => $this->debug,
             'autoescape' => 'html',
         ];
+
+        if (isset($config->saveData)) {
+            $this->saveData = $config->saveData;
+        }
 
         return $this;
     }
@@ -234,10 +246,12 @@ class Twig
     {
         $start = microtime(true);
         $data  = esc($params, 'raw');
-
         $this->tempData ??= $this->data;
         $this->tempData = array_merge($this->tempData, $data);
-        
+
+        // Make our view data available to the view.
+        $this->prepareTemplateData($this->saveData);
+
         $this->createTwig();
         // We call addFunctions() here, because we must call addFunctions()
         // after loading CodeIgniter functions in a controller.
@@ -249,11 +263,9 @@ class Twig
 
         if($this->debug)
         {
-            $this->prepareTemplateData();
-
             $this->logPerformance($start, microtime(true), $view);
 
-            if ($this->config['debug'] && in_array(DebugToolbar::class, service('filters')->getFiltersClass()['after'], true) ) {
+            if (in_array(DebugToolbar::class, service('filters')->getFiltersClass()['after'], true) ) {
                 $toolbarCollectors = config(Toolbar::class)->collectors;
     
                 if (in_array(CollectorsTwig::class, $toolbarCollectors, true)) {
@@ -263,6 +275,8 @@ class Twig
                 }
             }
         }
+
+        $this->tempData = null;
 
         return $output;
     }
@@ -306,7 +320,7 @@ class Twig
      *
      * @return void
      */
-    protected function logPerformance(float $start, float $end, string $view)
+    protected function logPerformance(float $start, float $end, string $view): void
     {
         $this->performanceData[] = [
             'start' => $start,
@@ -315,9 +329,12 @@ class Twig
         ];
     }
 
-    protected function prepareTemplateData(): void
+    protected function prepareTemplateData(bool $saveData): void
     {
         $this->tempData ??= $this->data;
-        $this->data = $this->tempData;
+
+        if ($saveData) {
+            $this->data = $this->tempData;
+        }
     }
 }
