@@ -4,7 +4,6 @@ namespace Daycry\Twig\Config;
 
 use CodeIgniter\Config\BaseService;
 use Daycry\Twig\Config\Twig as TwigConfig;
-
 use Daycry\Twig\Twig;
 
 class Services extends BaseService

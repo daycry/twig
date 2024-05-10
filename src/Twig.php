@@ -11,8 +11,8 @@ use Twig\Environment;
 use Twig\Extension\DebugExtension;
 use Twig\Loader\FilesystemLoader;
 use Twig\Loader\LoaderInterface;
-use Twig\TwigFunction;
 use Twig\TwigFilter;
+use Twig\TwigFunction;
 
 /**
  * Class General
@@ -21,8 +21,6 @@ class Twig
 {
     /**
      * Saved Data.
-     *
-     * @var array
      */
     protected array $data = [];
 
@@ -67,10 +65,10 @@ class Twig
     private ?LoaderInterface $loader = null;
 
     protected array $performanceData = [];
-    protected bool $debug = false;
-    protected bool $saveData = true;
-    protected ?array $tempData = null;
-    protected int $viewsCount = 0;
+    protected bool $debug            = false;
+    protected bool $saveData         = true;
+    protected ?array $tempData       = null;
+    protected int $viewsCount        = 0;
 
     public function __construct(?TwigConfig $config = null)
     {
@@ -267,21 +265,20 @@ class Twig
         // after loading CodeIgniter functions in a controller.
         $this->addFunctions();
 
-        $view = $view . '.twig';
+        $view .= '.twig';
 
         $output = $this->twig->render($view, $params);
 
-        if($this->debug)
-        {
+        if ($this->debug) {
             $this->logPerformance($start, microtime(true), $view);
 
-            if (in_array(DebugToolbar::class, service('filters')->getFiltersClass()['after'], true) ) {
+            if (in_array(DebugToolbar::class, service('filters')->getFiltersClass()['after'], true)) {
                 $toolbarCollectors = config(Toolbar::class)->collectors;
-    
+
                 if (in_array(CollectorsTwig::class, $toolbarCollectors, true)) {
                     $output = '<!-- DEBUG-VIEW START ' . $view . ' -->' . PHP_EOL
                         . $output . PHP_EOL
-                        . '<!-- DEBUG-VIEW ENDED ' .$view . ' -->' . PHP_EOL;
+                        . '<!-- DEBUG-VIEW ENDED ' . $view . ' -->' . PHP_EOL;
                 }
             }
         }
@@ -300,11 +297,10 @@ class Twig
 
         $template = $this->twig->createTemplate($template);
 
-        if( !$display )
-        {
+        if (! $display) {
             return $template->render($params);
         }
-        
+
         echo $template->render($params);
     }
 
@@ -327,15 +323,13 @@ class Twig
 
     /**
      * Logs performance data for rendering a view.
-     *
-     * @return void
      */
     protected function logPerformance(float $start, float $end, string $view): void
     {
         $this->performanceData[] = [
             'start' => $start,
             'end'   => $end,
-            'view'  => $view
+            'view'  => $view,
         ];
     }
 
