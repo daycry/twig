@@ -19,7 +19,7 @@ class TwigHelperTest extends CIUnitTestCase
         parent::setUp();
 
         $this->config = new TwigConfig();
-        $this->config->paths = [ './tests/_support/templates/' ];
+        $this->config->paths = [ './tests/_support/Templates/' ];
         $this->config->functions_asis = [ 'md5' ];
 
         $this->twig = new Twig( $this->config );

@@ -7,6 +7,7 @@ use Twig\Environment;
 use Daycry\Twig\Config\Services;
 use CodeIgniter\Test\CIUnitTestCase;
 use Daycry\Twig\Twig;
+use Tests\Support\Filters\CustomFilter;
 
 class TwigTest extends CIUnitTestCase
 {
@@ -20,8 +21,9 @@ class TwigTest extends CIUnitTestCase
         parent::setUp();
 
         $this->config = new TwigConfig();
-        $this->config->paths = [ './tests/_support/templates/' ];
+        $this->config->paths = [ './tests/_support/Templates/' ];
         $this->config->functions_asis = [ 'md5' ];
+        $this->config->filters = [ 'customFilter' => [ CustomFilter::class, 'run' ]];
 
         $this->twig = new Twig( $this->config );
     }
@@ -153,5 +155,11 @@ class TwigTest extends CIUnitTestCase
 
         $output = $this->twig->render('functions_safe');
         $this->assertEquals('<s>test</s>' . "\n", $output);
+    }
+
+    public function testCustomFilters()
+    {
+        $output = $this->twig->render('custom_filter');
+        $this->assertEquals('hello-modified', $output);
     }
 }

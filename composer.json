@@ -42,7 +42,7 @@
             "Tests\\": "tests/",
             "Tests\\Support\\": "tests/_support"
         },
-        "files": ["tests/_support/functions/twigFunctions.php"]
+        "files": ["tests/_support/Functions/twigFunctions.php"]
     },
     "scripts": {
         "analyze": [
