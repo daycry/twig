@@ -12,6 +12,7 @@ use Twig\Extension\DebugExtension;
 use Twig\Loader\FilesystemLoader;
 use Twig\Loader\LoaderInterface;
 use Twig\TwigFunction;
+use Twig\TwigFilter;
 
 /**
  * Class General
@@ -43,6 +44,8 @@ class Twig
     private array $functions_safe = [
         'form_open', 'form_close', 'form_error', 'form_hidden', 'set_value',
     ];
+
+    private array $filters = [];
 
     /**
      * @var array Twig Environment Options
@@ -94,6 +97,8 @@ class Twig
         if (isset($config->paths)) {
             $this->paths = array_unique(array_merge($this->paths, $config->paths));
         }
+
+        $this->filters = array_unique(array_merge($this->filters, $config->filters));
 
         // default Twig config
         $this->config = [
@@ -171,6 +176,11 @@ class Twig
             if (function_exists($function)) {
                 $this->twig->addFunction(new TwigFunction($function, $function, ['is_safe' => ['html']]));
             }
+        }
+
+        // filters
+        foreach ($this->filters as $name => $filter) {
+            $this->twig->addFilter(new TwigFilter($name, $filter, ['is_variadic' => true, 'is_safe' => ['html']]));
         }
 
         // customized functions

@@ -10,6 +10,7 @@ class Twig extends BaseConfig
     public array $functions_asis = ['current_url', 'base_url', 'site_url'];
     public array $paths          = [];
     
+    public array $filters = [];
     /**
      * When false, the view method will clear the data between each
      * call. This keeps your data safe and ensures there is no accidental
