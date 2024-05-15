@@ -9,14 +9,32 @@ use Exception;
 
 class TwigPublish extends BaseCommand
 {
+    /**
+     * The group the command is lumped under
+     * when listing commands.
+     *
+     * @var string
+     */
     protected $group       = 'Twig';
+
+    /**
+     * The Command's name
+     *
+     * @var string
+     */
     protected $name        = 'twig:publish';
+
+    /**
+     * the Command's short description
+     *
+     * @var string
+     */
     protected $description = 'Twig config file publisher.';
 
     /**
-     * the Command's Options
+     * the Command's options description
      *
-     * @var array
+     * @var array<string, string>
      */
     protected $options = [
         '-f' => 'Force overwrite ALL existing files in destination.',
@@ -75,9 +93,9 @@ class TwigPublish extends BaseCommand
      * Write a file, catching any exceptions and showing a
      * nicely formatted error.
      *
-     * @param string $file Relative file path like 'Config/Auth.php'.
+     * @param string $path Relative file path like 'Config/Twig.php'.
      */
-    protected function writeFile(string $file, string $content): void
+    protected function writeFile(string $path, string $content): void
     {
         helper('filesystem');
         

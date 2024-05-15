@@ -43,6 +43,9 @@ class Twig
         'form_open', 'form_close', 'form_error', 'form_hidden', 'set_value',
     ];
 
+    /**
+     * @var array<string,string|array<mixed,string>> filters
+     */
     private array $filters = [];
 
     /**
