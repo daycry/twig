@@ -14,6 +14,15 @@ class TwigPublish extends BaseCommand
     protected $description = 'Twig config file publisher.';
 
     /**
+     * the Command's Options
+     *
+     * @var array
+     */
+    protected $options = [
+        '-f' => 'Force overwrite ALL existing files in destination.',
+    ];
+    
+    /**
      * The path to Daycry\Twig\src directory.
      *
      * @var string
@@ -62,8 +71,16 @@ class TwigPublish extends BaseCommand
     /**
      * Write a file, catching any exceptions and showing a nicely formatted error.
      */
-    protected function writeFile(string $path, string $content)
+    /**
+     * Write a file, catching any exceptions and showing a
+     * nicely formatted error.
+     *
+     * @param string $file Relative file path like 'Config/Auth.php'.
+     */
+    protected function writeFile(string $file, string $content): void
     {
+        helper('filesystem');
+        
         $config    = new Autoload();
         $appPath   = $config->psr4[APP_NAMESPACE];
         $directory = dirname($appPath . $path);
