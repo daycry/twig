@@ -45,7 +45,7 @@ jobs:
         run: composer install --ansi --no-interaction
 
       - name: Test with PHPUnit
-        run: script -e -c "vendor/bin/phpunit -v"
+        run: composer test"
       
       - name: Run Coveralls
         if: matrix.php-versions == '8.2'
