@@ -22,7 +22,7 @@ class Twig extends BaseConfig
     public array $paths = [];
 
     /**
-     * @var array<string, array|string> filters
+     * @var array<string,array|string> filters
      */
     public array $filters = [];
 
