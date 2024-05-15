@@ -2,30 +2,33 @@
 
 namespace Tests\Twig;
 
-use Daycry\Twig\Config\Twig as TwigConfig;
-use Twig\Environment;
-use Daycry\Twig\Config\Services;
 use CodeIgniter\Test\CIUnitTestCase;
+use Daycry\Twig\Config\Services;
+use Daycry\Twig\Config\Twig as TwigConfig;
 use Daycry\Twig\Twig;
 use Tests\Support\Filters\CustomFilter;
+use Twig\Environment;
 
-class TwigTest extends CIUnitTestCase
+/**
+ * @internal
+ */
+final class TwigTest extends CIUnitTestCase
 {
     protected TwigConfig $config;
     protected Twig $twig;
-    
+
     protected function setUp(): void
     {
         helper(['url', 'form', 'twig_helper']);
 
         parent::setUp();
 
-        $this->config = new TwigConfig();
-        $this->config->paths = [ './tests/_support/Templates/' ];
-        $this->config->functions_asis = [ 'md5' ];
-        $this->config->filters = [ 'customFilter' => [ CustomFilter::class, 'run' ]];
+        $this->config                 = new TwigConfig();
+        $this->config->paths          = ['./tests/_support/Templates/'];
+        $this->config->functions_asis = ['md5'];
+        $this->config->filters        = ['customFilter' => [CustomFilter::class, 'run']];
 
-        $this->twig = new Twig( $this->config );
+        $this->twig = new Twig($this->config);
     }
 
     public static function setUpBeforeClass(): void
@@ -37,38 +40,38 @@ class TwigTest extends CIUnitTestCase
     {
         $this->twig = new Twig();
 
-        $this->assertInstanceOf( Environment::class, $this->twig->getTwig());
-        $this->assertCount( 1, $this->twig->getPaths());
+        $this->assertInstanceOf(Environment::class, $this->twig->getTwig());
+        $this->assertCount(1, $this->twig->getPaths());
     }
 
     public function testConstructCustomConfig()
     {
-        $this->assertInstanceOf( Environment::class, $this->twig->getTwig());
-        $this->assertCount( 2, $this->twig->getPaths());
+        $this->assertInstanceOf(Environment::class, $this->twig->getTwig());
+        $this->assertCount(2, $this->twig->getPaths());
     }
 
     public function testConstructAsAService()
     {
         $this->twig = Services::twig(null, false);
 
-        $this->assertInstanceOf( Environment::class, $this->twig->getTwig());
-        $this->assertCount( 1, $this->twig->getPaths());
+        $this->assertInstanceOf(Environment::class, $this->twig->getTwig());
+        $this->assertCount(1, $this->twig->getPaths());
     }
 
     public function testConstructAsAServiceCustomConfig()
     {
-        $this->twig = Services::twig( $this->config, false );
+        $this->twig = Services::twig($this->config, false);
 
-        $this->assertInstanceOf( Environment::class, $this->twig->getTwig());
-        $this->assertCount( 2, $this->twig->getPaths());
+        $this->assertInstanceOf(Environment::class, $this->twig->getTwig());
+        $this->assertCount(2, $this->twig->getPaths());
     }
 
     public function testConstructAsAHelper()
     {
         $this->twig = twig_instance();
 
-        $this->assertInstanceOf( Environment::class, $this->twig->getTwig());
-        $this->assertCount( 1, $this->twig->getPaths());
+        $this->assertInstanceOf(Environment::class, $this->twig->getTwig());
+        $this->assertCount(1, $this->twig->getPaths());
     }
 
     public function testRender()
@@ -77,7 +80,7 @@ class TwigTest extends CIUnitTestCase
             'name' => 'CodeIgniter',
         ];
         $output = $this->twig->render('welcome', $data);
-        $this->assertEquals('Hello CodeIgniter!' . "\n", $output);
+        $this->assertSame("Hello CodeIgniter!\n", $output);
     }
 
     public function testDisplay()
@@ -88,7 +91,7 @@ class TwigTest extends CIUnitTestCase
 
         $this->twig->display('welcome', $data);
 
-        $this->expectOutputString('Hello CodeIgniter!' . "\n");
+        $this->expectOutputString("Hello CodeIgniter!\n");
     }
 
     public function testCreateTemplate()
@@ -118,7 +121,7 @@ class TwigTest extends CIUnitTestCase
         $this->twig->addGlobal('sitename', 'Global');
 
         $output = $this->twig->render('global');
-        $this->assertEquals('<title>Global</title>' . "\n", $output);
+        $this->assertSame("<title>Global</title>\n", $output);
     }
 
     public function testAddFunctionsRunsOnlyOnce()
@@ -131,35 +134,35 @@ class TwigTest extends CIUnitTestCase
 
         $output = $this->twig->render('welcome', $data);
 
-        $this->assertEquals('Hello CodeIgniter!' . "\n", $output);
+        $this->assertSame("Hello CodeIgniter!\n", $output);
         $this->assertTrue($this->getPrivateProperty($this->twig, 'functions_added'));
 
         // Calls render() twice
         $output = $this->twig->render('welcome', $data);
 
-        $this->assertEquals('Hello CodeIgniter!' . "\n", $output);
+        $this->assertSame("Hello CodeIgniter!\n", $output);
         $this->assertTrue($this->getPrivateProperty($this->twig, 'functions_added'));
     }
 
     public function testFunctionAsIs()
     {
         $output = $this->twig->render('functions_asis');
-        $this->assertEquals('900150983cd24fb0d6963f7d28e17f72' . "\n", $output);
+        $this->assertSame("900150983cd24fb0d6963f7d28e17f72\n", $output);
     }
 
     public function testFunctionSafe()
     {
-        $this->config->functions_safe = [ 'functionSafe' ];
+        $this->config->functions_safe = ['functionSafe'];
 
-        $this->twig->initialize( $this->config );
+        $this->twig->initialize($this->config);
 
         $output = $this->twig->render('functions_safe');
-        $this->assertEquals('<s>test</s>' . "\n", $output);
+        $this->assertSame("<s>test</s>\n", $output);
     }
 
     public function testCustomFilters()
     {
         $output = $this->twig->render('custom_filter');
-        $this->assertEquals('hello-modified', $output);
+        $this->assertSame('hello-modified', $output);
     }
 }

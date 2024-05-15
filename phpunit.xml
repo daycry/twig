@@ -1,37 +1,46 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<phpunit 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    	xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
 		bootstrap="vendor/codeigniter4/framework/system/Test/bootstrap.php"
 		backupGlobals="false"
+		beStrictAboutOutputDuringTests="true"
 		colors="true"
-		convertErrorsToExceptions="true"
-		convertNoticesToExceptions="true"
-		convertWarningsToExceptions="true"
-		stopOnError="false"
-		stopOnFailure="false"
-		stopOnIncomplete="false"
-		stopOnSkipped="false"
-		xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.3/phpunit.xsd">
-
-    <coverage includeUncoveredFiles="true" processUncoveredFiles="true">
-		<include>
-			<directory suffix=".php">./src</directory>
-		</include>
-        <exclude>
-			<directory suffix=".php">./src/Commands</directory>
-		</exclude>
+		columns="max"
+		failOnRisky="true"
+		failOnWarning="true"
+		cacheDirectory="build/.phpunit.cache">
+    <coverage 
+		includeUncoveredFiles="true" 
+		pathCoverage="false" 
+		ignoreDeprecatedCodeUnits="true" 
+		disableCodeCoverageIgnore="true">
 		<report>
-			<clover outputFile="build/logs/clover.xml"/>
-			<html outputDirectory="build/logs/html"/>
-			<php outputFile="build/logs/coverage.serialized"/>
-			<text outputFile="php://stdout" showUncoveredFiles="false"/>
+			<clover outputFile="build/coverage/clover.xml"/>
+			<html outputDirectory="build/coverage/html"/>
+			<text outputFile="build/coverage/coverage.txt"/>
 		</report>
 	</coverage>
-
+	<extensions>
+        <bootstrap class="Nexus\PHPUnit\Tachycardia\TachycardiaExtension">
+            <parameter name="time-limit" value="0.50" />
+            <parameter name="report-count" value="30" />
+        </bootstrap>
+    </extensions>
     <testsuites>
         <testsuite name="Twig">
             <directory suffix="Test.php">tests</directory>
         </testsuite>
     </testsuites>
+
+	<source>
+        <include>
+			<directory suffix=".php">./src</directory>
+		</include>
+        <exclude>
+			<directory suffix=".php">./src/Commands</directory>
+		</exclude>
+    </source>
 
     <logging>
 		<testdoxHtml outputFile="build/logs/testdox.html"/>
@@ -41,6 +50,7 @@
 
     <php>
         <server name="app.baseURL" value="http://localhost/"/>
+		<server name="CODEIGNITER_SCREAM_DEPRECATIONS" value="1"/>
 
         <!-- Directory containing phpunit.xml -->
         <const name="HOMEPATH" value="./"/>

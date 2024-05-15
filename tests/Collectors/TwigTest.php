@@ -13,9 +13,10 @@ declare(strict_types=1);
 
 namespace Tests\Collectors;
 
-use CodeIgniter\Test\DatabaseTestTrait;
 use CodeIgniter\Test\CIUnitTestCase;
+use CodeIgniter\Test\DatabaseTestTrait;
 use Daycry\Twig\Debug\Toolbar\Collectors\Twig;
+
 /**
  * @internal
  */

@@ -4,7 +4,10 @@ namespace Tests\Twig;
 
 use CodeIgniter\Test\CIUnitTestCase;
 
-class UrlHelperTest extends CIUnitTestCase
+/**
+ * @internal
+ */
+final class UrlHelperTest extends CIUnitTestCase
 {
     public static function setUpBeforeClass(): void
     {
@@ -15,26 +18,26 @@ class UrlHelperTest extends CIUnitTestCase
 
     public function testBaseUrl()
     {
-        $acutual = base_url('images/icons/simle.jpg');
+        $acutual  = base_url('images/icons/simle.jpg');
         $expected = 'http://localhost/images/icons/simle.jpg';
-        $this->assertEquals($expected, $acutual);
+        $this->assertSame($expected, $acutual);
 
         $acutual = base_url('"><s>abc</s><a name="test');
-//        $expected = 'http://localhost/"><s>abc</s><a name="test'; // CI3
+        //        $expected = 'http://localhost/"><s>abc</s><a name="test'; // CI3
         $expected = 'http://localhost/%22%3E%3Cs%3Eabc%3C/s%3E%3Ca%20name=%22test';
-        $this->assertEquals($expected, $acutual);
+        $this->assertSame($expected, $acutual);
     }
 
     public function testSiteUrl()
     {
-        $actual = site_url('welcome');
+        $actual   = site_url('welcome');
         $expected = 'http://localhost/index.php/welcome';
-        $this->assertEquals($expected, $actual);
+        $this->assertSame($expected, $actual);
 
         $actual = site_url('"><s>abc</s><a name="test');
-//        $expected = 'http://localhost/index.php/"><s>abc</s><a name="test'; // CI3
+        //        $expected = 'http://localhost/index.php/"><s>abc</s><a name="test'; // CI3
         $expected = 'http://localhost/index.php/%22%3E%3Cs%3Eabc%3C/s%3E%3Ca%20name=%22test';
-        $this->assertEquals($expected, $actual);
+        $this->assertSame($expected, $actual);
     }
 
     public function testAnchor()
@@ -46,7 +49,7 @@ class UrlHelperTest extends CIUnitTestCase
         );
 
         $expected = '<a href="http://localhost/index.php/news/local/123" title="The best news!">My News</a>';
-        $this->assertEquals($expected, $actual);
+        $this->assertSame($expected, $actual);
 
         $actual = anchor(
             'news/local/123',
@@ -55,6 +58,6 @@ class UrlHelperTest extends CIUnitTestCase
         );
 
         $expected = '<a href="http://localhost/index.php/news/local/123" <s>name</s>="&lt;s&gt;val&lt;/s&gt;"><s>abc</s></a>';
-        $this->assertEquals($expected, $actual);
+        $this->assertSame($expected, $actual);
     }
 }

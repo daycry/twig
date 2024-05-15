@@ -6,10 +6,25 @@ use CodeIgniter\Config\BaseConfig;
 
 class Twig extends BaseConfig
 {
+    /**
+     * @var list<string> functions_safe
+     */
     public array $functions_safe = ['form_open', 'form_close', 'form_hidden', 'json_decode', 'form_error', 'form_hidden', 'set_value', 'csrf_field'];
+
+    /**
+     * @var list<string> functions_asis
+     */
     public array $functions_asis = ['current_url', 'base_url', 'site_url'];
-    public array $paths          = [];
-    public array $filters        = [];
+
+    /**
+     * @var list<string> paths
+     */
+    public array $paths = [];
+
+    /**
+     * @var array<string, array|string> filters
+     */
+    public array $filters = [];
 
     /**
      * When false, the view method will clear the data between each

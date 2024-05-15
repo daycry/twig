@@ -24,7 +24,7 @@
     {
         "codeigniter4/devkit": "^1.0",
         "codeigniter4/framework": "^4",
-        "rector/rector": "1.0.4"
+        "rector/rector": "1.0.5"
     },
     "minimum-stability": "dev",
     "prefer-stable": true,
@@ -56,8 +56,14 @@
             "@analyze",
             "@test"
         ],
-        "cs": "php-cs-fixer fix --ansi --verbose --dry-run --diff",
-        "cs-fix": "php-cs-fixer fix --ansi --verbose --diff --using-cache=yes",
+        "cs": [
+            "Composer\\Config::disableProcessTimeout",
+            "php-cs-fixer fix --ansi --verbose --dry-run --diff"
+        ],
+        "cs-fix": [ 
+            "Composer\\Config::disableProcessTimeout",
+            "php-cs-fixer fix --ansi --verbose --diff"
+        ],
         "style": "@cs-fix",
         "deduplicate": "php phpcpd.phar src/",
         "mutate": "infection --threads=2 --skip-initial-tests --coverage=build/phpunit",
