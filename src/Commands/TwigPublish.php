@@ -15,14 +15,14 @@ class TwigPublish extends BaseCommand
      *
      * @var string
      */
-    protected $group       = 'Twig';
+    protected $group = 'Twig';
 
     /**
      * The Command's name
      *
      * @var string
      */
-    protected $name        = 'twig:publish';
+    protected $name = 'twig:publish';
 
     /**
      * the Command's short description
@@ -39,7 +39,7 @@ class TwigPublish extends BaseCommand
     protected $options = [
         '-f' => 'Force overwrite ALL existing files in destination.',
     ];
-    
+
     /**
      * The path to Daycry\Twig\src directory.
      *
@@ -98,7 +98,7 @@ class TwigPublish extends BaseCommand
     protected function writeFile(string $path, string $content): void
     {
         helper('filesystem');
-        
+
         $config    = new Autoload();
         $appPath   = $config->psr4[APP_NAMESPACE];
         $directory = dirname($appPath . $path);

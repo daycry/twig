@@ -44,7 +44,7 @@ class Twig
     ];
 
     /**
-     * @var array<string,string|array<mixed,string>> filters
+     * @var array<string,array<mixed,string>|string> filters
      */
     private array $filters = [];
 
