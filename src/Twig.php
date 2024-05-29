@@ -24,6 +24,8 @@ class Twig
      */
     protected array $data = [];
 
+    protected string $extension = '.twig';
+
     /**
      * @var array Paths to Twig templates
      */
@@ -86,6 +88,10 @@ class Twig
         }
 
         $this->debug = (ENVIRONMENT !== 'production') ? true : false;
+
+        if (isset($config->extension) && $config->extension !== '') {
+            $this->extension = $config->extension;
+        }
 
         if (isset($config->functions_asis)) {
             $this->functions_asis = array_unique(array_merge($this->functions_asis, $config->functions_asis));
@@ -268,7 +274,7 @@ class Twig
         // after loading CodeIgniter functions in a controller.
         $this->addFunctions();
 
-        $view .= '.twig';
+        $view .= $this->extension;
 
         $output = $this->twig->render($view, $params);
 

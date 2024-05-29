@@ -6,6 +6,8 @@ use CodeIgniter\Config\BaseConfig;
 
 class Twig extends BaseConfig
 {
+    public string $extension = '.twig';
+
     /**
      * @var list<string> functions_safe
      */

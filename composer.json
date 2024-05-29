@@ -22,7 +22,7 @@
     },
     "require-dev":
     {
-        "codeigniter4/devkit": "^1.0",
+        "codeigniter4/devkit": "*",
         "codeigniter4/framework": "^4",
         "rector/rector": "1.1.0"
     },
