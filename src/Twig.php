@@ -265,7 +265,16 @@ class Twig
         }
 
         if ($this->loader === null) {
-            $this->loader = new FilesystemLoader($this->paths);
+            $this->loader = new FilesystemLoader();
+
+            foreach ($this->paths as $path) {
+                if (is_array($path)) {
+                    $this->loader->addPath($path[0], $path[1]);
+
+                    continue;
+                }
+                $this->loader->addPath($path);
+            }
         }
 
         $twig = new Environment($this->loader, $this->config);
