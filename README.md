@@ -107,6 +107,7 @@ Toolbar.php file
     
     public array $collectors = [
         ...
+        //Views::class,
         Twig::class
     ];
 
