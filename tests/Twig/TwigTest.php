@@ -6,6 +6,8 @@ use CodeIgniter\Test\CIUnitTestCase;
 use Daycry\Twig\Config\Services;
 use Daycry\Twig\Config\Twig as TwigConfig;
 use Daycry\Twig\Twig;
+use stdClass;
+use Tests\Support\Extensions\TwigCustomExtension;
 use Tests\Support\Filters\CustomFilter;
 use Twig\Environment;
 
@@ -27,6 +29,7 @@ final class TwigTest extends CIUnitTestCase
         $this->config->paths          = ['./tests/_support/Templates/'];
         $this->config->functions_asis = ['md5'];
         $this->config->filters        = ['customFilter' => [CustomFilter::class, 'run']];
+        $this->config->extensions     = [TwigCustomExtension::class];
 
         $this->twig = new Twig($this->config);
     }
@@ -105,7 +108,7 @@ final class TwigTest extends CIUnitTestCase
         $this->expectOutputString('Hello CodeIgniter!');
     }
 
-    public function testCreateTemplateDsiplay()
+    public function testCreateTemplateDisplay()
     {
         $data = [
             'name' => 'CodeIgniter',
@@ -164,5 +167,13 @@ final class TwigTest extends CIUnitTestCase
     {
         $output = $this->twig->render('custom_filter');
         $this->assertSame('hello-modified', $output);
+    }
+
+    public function testCustomExtensions()
+    {
+        $object = new stdClass();
+        $object->key = 'value';
+        $output = $this->twig->render('custom_extension', ['object' => $object ]);
+        $this->assertStringContainsString('key:value', $output);
     }
 }
