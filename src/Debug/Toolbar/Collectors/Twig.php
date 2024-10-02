@@ -49,7 +49,7 @@ class Twig extends BaseCollector
      *
      * @var string
      */
-    protected $title = 'Twig';
+    protected $title = 'Views';
 
     /**
      * Instance of the shared Renderer service
