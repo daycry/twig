@@ -58,6 +58,11 @@ class Twig
     private array $config = [];
 
     /**
+     * https://twig.symfony.com/doc/3.x/advanced.html
+     */
+    private array $extensions = [];
+
+    /**
      * @var bool Whether functions are added or not
      */
     private bool $functions_added = false;
@@ -89,23 +94,25 @@ class Twig
 
         $this->debug = (ENVIRONMENT !== 'production') ? true : false;
 
+        $this->extensions = $this->unique_matrix($config->extensions);
+
         if (isset($config->extension) && $config->extension !== '') {
             $this->extension = $config->extension;
         }
 
         if (isset($config->functions_asis)) {
-            $this->functions_asis = array_unique(array_merge($this->functions_asis, $config->functions_asis));
+            $this->functions_asis = $this->unique_matrix(array_merge($this->functions_asis, $config->functions_asis));
         }
 
         if (isset($config->functions_safe)) {
-            $this->functions_safe = array_unique(array_merge($this->functions_safe, $config->functions_safe));
+            $this->functions_safe = $this->unique_matrix(array_merge($this->functions_safe, $config->functions_safe));
         }
 
         if (isset($config->paths)) {
-            $this->paths = array_unique(array_merge($this->paths, $config->paths));
+            $this->paths = $this->unique_matrix(array_merge($this->paths, $config->paths));
         }
 
-        $this->filters = array_unique(array_merge($this->filters, $config->filters));
+        $this->filters = $this->unique_matrix(array_merge($this->filters, $config->filters));
 
         // default Twig config
         $this->config = [
@@ -125,79 +132,6 @@ class Twig
     {
         $this->twig = null;
         $this->createTwig();
-    }
-
-    protected function createTwig()
-    {
-        // $this->twig is singleton
-        if ($this->twig !== null) {
-            return;
-        }
-
-        if ($this->loader === null) {
-            $this->loader = new FilesystemLoader($this->paths);
-        }
-
-        $twig = new Environment($this->loader, $this->config);
-
-        if ($this->debug) {
-            $twig->addExtension(new DebugExtension());
-        }
-
-        $this->twig = $twig;
-    }
-
-    protected function setLoader($loader)
-    {
-        $this->loader = $loader;
-    }
-
-    /**
-     * Registers a Global
-     *
-     * @param string $name  The global name
-     * @param mixed  $value The global value
-     */
-    public function addGlobal($name, $value)
-    {
-        $this->createTwig();
-        $this->twig->addGlobal($name, $value);
-    }
-
-    protected function addFunctions()
-    {
-        // Runs only once
-        if ($this->functions_added) {
-            return;
-        }
-
-        // as is functions
-        foreach ($this->functions_asis as $function) {
-            if (function_exists($function)) {
-                $this->twig->addFunction(new TwigFunction($function, $function));
-            }
-        }
-
-        // safe functions
-        foreach ($this->functions_safe as $function) {
-            if (function_exists($function)) {
-                $this->twig->addFunction(new TwigFunction($function, $function, ['is_safe' => ['html']]));
-            }
-        }
-
-        // filters
-        foreach ($this->filters as $name => $filter) {
-            $this->twig->addFilter(new TwigFilter($name, $filter, ['is_variadic' => true, 'is_safe' => ['html']]));
-        }
-
-        // customized functions
-        if (function_exists('anchor')) {
-            $this->twig->addFunction(new TwigFunction('anchor', [$this, 'safe_anchor'], ['is_safe' => ['html']]));
-        }
-
-        $this->twig->addFunction(new TwigFunction('validation_list_errors', [$this, 'validation_list_errors'], ['is_safe' => ['html']]));
-
-        $this->functions_added = true;
     }
 
     /**
@@ -330,6 +264,91 @@ class Twig
         return $this->tempData ?? $this->data;
     }
 
+    protected function createTwig()
+    {
+        // $this->twig is singleton
+        if ($this->twig !== null) {
+            return;
+        }
+
+        if ($this->loader === null) {
+            $this->loader = new FilesystemLoader();
+
+            foreach ($this->paths as $path) {
+                if (is_array($path)) {
+                    $this->loader->addPath($path[0], $path[1]);
+
+                    continue;
+                }
+                $this->loader->addPath($path);
+            }
+        }
+
+        $twig = new Environment($this->loader, $this->config);
+
+        if ($this->debug) {
+            $twig->addExtension(new DebugExtension());
+        }
+
+        foreach($this->extensions as $extension) {
+            $twig->addExtension(new $extension());
+        }
+        $this->twig = $twig;
+    }
+
+    protected function setLoader($loader)
+    {
+        $this->loader = $loader;
+    }
+
+    /**
+     * Registers a Global
+     *
+     * @param string $name  The global name
+     * @param mixed  $value The global value
+     */
+    public function addGlobal($name, $value)
+    {
+        $this->createTwig();
+        $this->twig->addGlobal($name, $value);
+    }
+
+    protected function addFunctions()
+    {
+        // Runs only once
+        if ($this->functions_added) {
+            return;
+        }
+
+        // as is functions
+        foreach ($this->functions_asis as $function) {
+            if (function_exists($function)) {
+                $this->twig->addFunction(new TwigFunction($function, $function));
+            }
+        }
+
+        // safe functions
+        foreach ($this->functions_safe as $function) {
+            if (function_exists($function)) {
+                $this->twig->addFunction(new TwigFunction($function, $function, ['is_safe' => ['html']]));
+            }
+        }
+
+        // filters
+        foreach ($this->filters as $name => $filter) {
+            $this->twig->addFilter(new TwigFilter($name, $filter, ['is_variadic' => true, 'is_safe' => ['html']]));
+        }
+
+        // customized functions
+        if (function_exists('anchor')) {
+            $this->twig->addFunction(new TwigFunction('anchor', [$this, 'safe_anchor'], ['is_safe' => ['html']]));
+        }
+
+        $this->twig->addFunction(new TwigFunction('validation_list_errors', [$this, 'validation_list_errors'], ['is_safe' => ['html']]));
+
+        $this->functions_added = true;
+    }
+
     /**
      * Logs performance data for rendering a view.
      */
@@ -349,5 +368,24 @@ class Twig
         if ($saveData) {
             $this->data = $this->tempData;
         }
+    }
+
+    private function unique_matrix($matrix)
+    {
+        $matrixAux = $matrix;
+
+        foreach ($matrix as $key => $subMatrix) {
+            unset($matrixAux[$key]);
+
+            foreach ($matrixAux as $subMatrixAux) {
+                if ($subMatrix === $subMatrixAux) {
+                    // Or this
+                    // if($subMatrix[0] === $subMatrixAux[0]) {
+                    unset($matrix[$key]);
+                }
+            }
+        }
+
+        return $matrix;
     }
 }

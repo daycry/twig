@@ -19,7 +19,20 @@ class Twig extends BaseConfig
     public array $functions_asis = ['current_url', 'base_url', 'site_url'];
 
     /**
-     * @var list<string> paths
+     * @var list<array<string,string>|string> paths
+     *
+     * A second parameter can be added to indicate the namespace of the view
+     *
+     * Example: public array $paths = [[APPPATH.'Module1/Views', 'module1'], APPPATH.'Module2/Views'];
+     *
+     * For use templates inside Module1
+     * $twig->render('@module1/view')
+     *
+     * OR
+     *
+     * For use templates inside Module2
+     *
+     * $twig->render('view')
      */
     public array $paths = [];
 
@@ -27,6 +40,11 @@ class Twig extends BaseConfig
      * @var array<string,array<mixed,string>|string> filters
      */
     public array $filters = [];
+
+    /**
+     * @var array<string> extensions
+     */
+    public array $extensions = [];
 
     /**
      * When false, the view method will clear the data between each
