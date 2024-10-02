@@ -42,6 +42,11 @@ class Twig extends BaseConfig
     public array $filters = [];
 
     /**
+     * @var array<string> extensions
+     */
+    public array $extensions = [];
+
+    /**
      * When false, the view method will clear the data between each
      * call. This keeps your data safe and ensures there is no accidental
      * leaking between calls, so you would need to explicitly pass the data

@@ -58,6 +58,11 @@ class Twig
     private array $config = [];
 
     /**
+     * https://twig.symfony.com/doc/3.x/advanced.html
+     */
+    private array $extensions = [];
+
+    /**
      * @var bool Whether functions are added or not
      */
     private bool $functions_added = false;
@@ -88,6 +93,8 @@ class Twig
         }
 
         $this->debug = (ENVIRONMENT !== 'production') ? true : false;
+
+        $this->extensions = $this->unique_matrix($config->extensions);
 
         if (isset($config->extension) && $config->extension !== '') {
             $this->extension = $config->extension;
@@ -283,6 +290,9 @@ class Twig
             $twig->addExtension(new DebugExtension());
         }
 
+        foreach($this->extensions as $extension) {
+            $twig->addExtension(new $extension());
+        }
         $this->twig = $twig;
     }
 
