@@ -171,9 +171,9 @@ final class TwigTest extends CIUnitTestCase
 
     public function testCustomExtensions()
     {
-        $object = new stdClass();
+        $object      = new stdClass();
         $object->key = 'value';
-        $output = $this->twig->render('custom_extension', ['object' => $object ]);
+        $output      = $this->twig->render('custom_extension', ['object' => $object]);
         $this->assertStringContainsString('key:value', $output);
     }
 }

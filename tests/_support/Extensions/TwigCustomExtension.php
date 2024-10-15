@@ -19,6 +19,7 @@ class TwigCustomExtension extends AbstractExtension
     public function castToArray($object, array $options = []): array
     {
         $response = [];
+
         foreach ($object as $key => $value) {
             $response[$key] = $value;
         }

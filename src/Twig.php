@@ -168,9 +168,6 @@ class Twig
         return $this->twig;
     }
 
-    /**
-     * @return array
-     */
     public function getPaths(): array
     {
         return $this->paths;
@@ -212,28 +209,28 @@ class Twig
 
         $output = $this->twig->render($view, $params);
 
-		// Check if DebugToolbar is enabled.
-		$filters              = service('filters');
-		$requiredAfterFilters = $filters->getRequiredFilters('after')[0];
+        // Check if DebugToolbar is enabled.
+        $filters              = service('filters');
+        $requiredAfterFilters = $filters->getRequiredFilters('after')[0];
 
-		if (in_array('toolbar', $requiredAfterFilters, true)) {
-			$debugBarEnabled = true;
-		} else {
-			$afterFilters    = $filters->getFiltersClass()['after'];
-			$debugBarEnabled = in_array(DebugToolbar::class, $afterFilters, true);
-		}
+        if (in_array('toolbar', $requiredAfterFilters, true)) {
+            $debugBarEnabled = true;
+        } else {
+            $afterFilters    = $filters->getFiltersClass()['after'];
+            $debugBarEnabled = in_array(DebugToolbar::class, $afterFilters, true);
+        }
 
-		if ($this->debug && $debugBarEnabled) {
-			$this->logPerformance($start, microtime(true), $view);
+        if ($this->debug && $debugBarEnabled) {
+            $this->logPerformance($start, microtime(true), $view);
 
-			$toolbarCollectors = config(Toolbar::class)->collectors;
+            $toolbarCollectors = config(Toolbar::class)->collectors;
 
-			if (in_array(CollectorsTwig::class, $toolbarCollectors, true)) {
-				$output = '<!-- DEBUG-VIEW START ' . $view . ' -->' . PHP_EOL
-					. $output . PHP_EOL
-					. '<!-- DEBUG-VIEW ENDED ' . $view . ' -->' . PHP_EOL;
-			}
-		}
+            if (in_array(CollectorsTwig::class, $toolbarCollectors, true)) {
+                $output = '<!-- DEBUG-VIEW START ' . $view . ' -->' . PHP_EOL
+                    . $output . PHP_EOL
+                    . '<!-- DEBUG-VIEW ENDED ' . $view . ' -->' . PHP_EOL;
+            }
+        }
 
         $this->tempData = null;
 
@@ -299,7 +296,7 @@ class Twig
             $twig->addExtension(new DebugExtension());
         }
 
-        foreach($this->extensions as $extension) {
+        foreach ($this->extensions as $extension) {
             $twig->addExtension(new $extension());
         }
         $this->twig = $twig;
