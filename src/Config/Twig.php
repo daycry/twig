@@ -19,7 +19,7 @@ class Twig extends BaseConfig
     public array $functions_asis = ['current_url', 'base_url', 'site_url'];
 
     /**
-     * @var list<array<string,string>|string> paths
+     * @var array<array<string,string>|string> paths
      *
      * A second parameter can be added to indicate the namespace of the view
      *
@@ -42,7 +42,7 @@ class Twig extends BaseConfig
     public array $filters = [];
 
     /**
-     * @var array<string> extensions
+     * @var list<string> extensions
      */
     public array $extensions = [];
 
