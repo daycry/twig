@@ -9,7 +9,7 @@ if (! function_exists('twig_instance')) {
      *
      * @return Twig
      */
-    function twig_instance()
+    function twig_instance(): Twig
     {
         return Services::twig();
     }

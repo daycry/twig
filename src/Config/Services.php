@@ -8,7 +8,7 @@ use Daycry\Twig\Twig;
 
 class Services extends BaseService
 {
-    public static function twig(?TwigConfig $config = null, bool $getShared = true)
+    public static function twig(?TwigConfig $config = null, bool $getShared = true): Twig
     {
         if ($getShared) {
             return static::getSharedInstance('twig', $config);

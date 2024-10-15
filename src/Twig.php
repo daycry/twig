@@ -85,7 +85,7 @@ class Twig
         $this->initialize($config);
     }
 
-    public function initialize(?TwigConfig $config = null)
+    public function initialize(?TwigConfig $config = null): Twig
     {
         if (empty($config)) {
             /** @var TwigConfig $config */
@@ -128,7 +128,7 @@ class Twig
         return $this;
     }
 
-    public function resetTwig()
+    public function resetTwig(): void
     {
         $this->twig = null;
         $this->createTwig();
@@ -171,7 +171,7 @@ class Twig
     /**
      * @return array
      */
-    public function getPaths()
+    public function getPaths(): array
     {
         return $this->paths;
     }
@@ -273,7 +273,7 @@ class Twig
         return $this->tempData ?? $this->data;
     }
 
-    protected function createTwig()
+    protected function createTwig(): void
     {
         // $this->twig is singleton
         if ($this->twig !== null) {
@@ -316,13 +316,13 @@ class Twig
      * @param string $name  The global name
      * @param mixed  $value The global value
      */
-    public function addGlobal($name, $value)
+    public function addGlobal($name, $value): void
     {
         $this->createTwig();
         $this->twig->addGlobal($name, $value);
     }
 
-    protected function addFunctions()
+    protected function addFunctions(): void
     {
         // Runs only once
         if ($this->functions_added) {
@@ -379,7 +379,7 @@ class Twig
         }
     }
 
-    private function unique_matrix($matrix)
+    private function unique_matrix($matrix): array
     {
         $matrixAux = $matrix;
 
