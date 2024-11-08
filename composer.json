@@ -24,7 +24,7 @@
     {
         "codeigniter4/devkit": "*",
         "codeigniter4/framework": "^4",
-        "rector/rector": "1.2.7"
+        "rector/rector": "1.2.10"
     },
     "minimum-stability": "dev",
     "prefer-stable": true,
