@@ -13,6 +13,11 @@ use Twig\Loader\FilesystemLoader;
 use Twig\Loader\LoaderInterface;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
+use Daycry\Twig\Registry\DynamicRegistry;
+// (LoggerInterface import removed — logging now uses global log_message helper only)
+use Daycry\Twig\Discovery\TemplateDiscovery;
+use Daycry\Twig\Cache\TemplateCacheManager;
+use Daycry\Twig\Invalidation\TemplateInvalidator;
 
 /**
  * Class General
@@ -61,6 +66,11 @@ class Twig
      * https://twig.symfony.com/doc/3.x/advanced.html
      */
     private array $extensions = [];
+    /**
+     * Extensions queued before the Environment is created or manually registered after creation.
+     * @var list<class-string<\Twig\Extension\ExtensionInterface>>
+     */
+    private array $pendingExtensions = [];
 
     /**
      * @var bool Whether functions are added or not
@@ -79,9 +89,24 @@ class Twig
     protected bool $saveData         = true;
     protected ?array $tempData       = null;
     protected int $viewsCount        = 0;
+    // (No internal logger instance retained)
+    /** Cache manager for compiled templates & index */
+    private TemplateCacheManager $cacheManager;
+    /** Dynamic registry extracted (Stage3) */
+    private DynamicRegistry $dynamicRegistry;
+    /** @var array<string,string|bool> namespace specific autoescape strategies (namespace without @) */
+    private array $autoescapeNamespaceMap = [];
+    /** In-process cache of discovered logical template names. */
+    // Removed: handled by TemplateDiscovery service
+    private TemplateDiscovery $discovery;
+    private TemplateInvalidator $invalidator;
 
     public function __construct(?TwigConfig $config = null)
     {
+    $this->discovery = new TemplateDiscovery();
+    $this->cacheManager = new TemplateCacheManager($this->extension);
+    $this->dynamicRegistry = new DynamicRegistry();
+    $this->invalidator = new TemplateInvalidator($this->cacheManager, $this->discovery, $this->extension);
         $this->initialize($config);
     }
 
@@ -96,8 +121,11 @@ class Twig
 
         $this->extensions = $this->unique_matrix($config->extensions);
 
+        // Logging now relies solely on the framework helper log_message(); no internal logger stored.
+
         if (isset($config->extension) && $config->extension !== '') {
             $this->extension = $config->extension;
+            $this->cacheManager = new TemplateCacheManager($this->extension);
         }
 
         if (isset($config->functions_asis)) {
@@ -114,11 +142,13 @@ class Twig
 
         $this->filters = $this->unique_matrix(array_merge($this->filters, $config->filters));
 
-        // default Twig config
+        // default Twig config (allow overriding cache path via config property)
+        $cachePath = $config->cachePath ?? (WRITEPATH . 'cache' . DIRECTORY_SEPARATOR . 'twig');
         $this->config = [
-            'cache'      => WRITEPATH . 'cache' . DIRECTORY_SEPARATOR . 'twig',
-            'debug'      => $this->debug,
-            'autoescape' => 'html',
+            'cache'            => $cachePath,
+            'debug'            => $this->debug,
+            'autoescape'       => 'html',
+            'strict_variables' => $config->strictVariables ?? false,
         ];
 
         if (isset($config->saveData)) {
@@ -131,6 +161,9 @@ class Twig
     public function resetTwig(): void
     {
         $this->twig = null;
+    if (function_exists('log_message')) { log_message('debug','event=twig.reset'); }
+        // Invalidate discovery cache on reset via service
+        $this->discovery->invalidate();
         $this->createTwig();
     }
 
@@ -231,40 +264,26 @@ class Twig
                     . '<!-- DEBUG-VIEW ENDED ' . $view . ' -->' . PHP_EOL;
             }
         }
-
         $this->tempData = null;
-
         return $output;
     }
 
     public function createTemplate(string $template, array $params = [], bool $display = false)
     {
         $this->createTwig();
-        // We call addFunctions() here, because we must call addFunctions()
-        // after loading CodeIgniter functions in a controller.
         $this->addFunctions();
-
         $template = $this->twig->createTemplate($template);
-
         if (! $display) {
             return $template->render($params);
         }
-
         echo $template->render($params);
     }
 
-    /**
-     * Returns the performance data that might have been collected
-     * during the execution. Used primarily in the Debug Toolbar.
-     */
     public function getPerformanceData(): array
     {
         return $this->performanceData;
     }
 
-    /**
-     * Returns the current data that will be displayed in the view.
-     */
     public function getData(): array
     {
         return $this->tempData ?? $this->data;
@@ -272,39 +291,43 @@ class Twig
 
     protected function createTwig(): void
     {
-        // $this->twig is singleton
-        if ($this->twig !== null) {
-            return;
-        }
-
-        if ($this->loader === null) {
-            $this->loader = new FilesystemLoader();
-
+        if ($this->twig !== null) { return; }
+        if ($this->loader === null) { $this->loader = new FilesystemLoader(); }
+        if ($this->loader instanceof FilesystemLoader) {
             foreach ($this->paths as $path) {
-                if (is_array($path)) {
-                    $this->loader->addPath($path[0], $path[1]);
-
-                    continue;
-                }
-                $this->loader->addPath($path);
+                if (is_array($path)) { $this->loader->addPath($path[0], $path[1]); }
+                else { $this->loader->addPath($path); }
             }
         }
-
         $twig = new Environment($this->loader, $this->config);
-
-        if ($this->debug) {
-            $twig->addExtension(new DebugExtension());
-        }
-
-        foreach ($this->extensions as $extension) {
-            $twig->addExtension(new $extension());
-        }
+        if ($this->debug) { $twig->addExtension(new DebugExtension()); }
+        foreach ($this->extensions as $extension) { $twig->addExtension(new $extension()); }
+        foreach ($this->pendingExtensions as $ext) { $twig->addExtension(new $ext()); }
         $this->twig = $twig;
+        if ($this->autoescapeNamespaceMap !== []) { $this->applyAutoescapeStrategy(); }
     }
 
     protected function setLoader($loader)
     {
         $this->loader = $loader;
+    }
+
+    /**
+     * Public fluent API to replace the internal Loader.
+     * Resets the current Twig Environment so that subsequent renders
+     * use the new loader. Existing configuration (filters/functions/extensions)
+     * will be re-applied lazily on next render.
+     */
+    public function withLoader(LoaderInterface $loader): self
+    {
+        $this->loader = $loader;
+        $this->twig   = null; // force re-create
+        $this->functions_added = false; // ensure functions re-added for new environment
+        // Invalidate discovery cache because loader changed
+        $this->discovery->invalidate();
+    if (function_exists('log_message')) { log_message('debug','event=twig.loader.replaced loader='.get_class($loader)); }
+
+        return $this;
     }
 
     /**
@@ -325,6 +348,7 @@ class Twig
         if ($this->functions_added) {
             return;
         }
+    if (function_exists('log_message')) { log_message('debug','event=twig.functions.start'); }
 
         // as is functions
         foreach ($this->functions_asis as $function) {
@@ -340,10 +364,12 @@ class Twig
             }
         }
 
-        // filters
+        // static filters from config (always safe html here to preserve previous behavior)
         foreach ($this->filters as $name => $filter) {
             $this->twig->addFilter(new TwigFilter($name, $filter, ['is_variadic' => true, 'is_safe' => ['html']]));
         }
+        // apply dynamic filters/functions via registry (includes queued & persisted)
+        $this->dynamicRegistry->apply($this->twig);
 
         // customized functions
         if (function_exists('anchor')) {
@@ -351,8 +377,41 @@ class Twig
         }
 
         $this->twig->addFunction(new TwigFunction('validation_list_errors', [$this, 'validation_list_errors'], ['is_safe' => ['html']]));
+    // dynamic registry apply manages its own internal queues
 
         $this->functions_added = true;
+    if (function_exists('log_message')) { log_message('debug','event=twig.functions.ready'); }
+    }
+
+    /**
+     * Register a Twig function dynamically (available in subsequent renders).
+     */
+    public function registerFunction(string $name, callable $callable, $options = []): self
+    {
+        // Backward compatibility: boolean indicates safe html
+        if (is_bool($options)) {
+            $options = $options ? ['is_safe' => ['html']] : [];
+        }
+        if (! is_array($options)) {
+            throw new \InvalidArgumentException('Function options must be array or bool.');
+        }
+        $this->dynamicRegistry->registerFunction($name, $callable, $options, $this->twig, $this->functions_added);
+        return $this;
+    }
+
+    /**
+     * Register a Twig filter dynamically.
+     */
+    public function registerFilter(string $name, callable $callable, $options = ['is_safe' => ['html']]): self
+    {
+        if (is_bool($options)) { // backward compatibility bool parameter
+            $options = $options ? ['is_safe' => ['html']] : [];
+        }
+        if (! is_array($options)) {
+            throw new \InvalidArgumentException('Filter options must be array or bool.');
+        }
+        $this->dynamicRegistry->registerFilter($name, $callable, $options, $this->twig, $this->functions_added);
+        return $this;
     }
 
     /**
@@ -376,22 +435,500 @@ class Twig
         }
     }
 
-    private function unique_matrix($matrix): array
+    private function unique_matrix(array $matrix): array
     {
-        $matrixAux = $matrix;
+        // Preserve keys for associative arrays (e.g. filters => callable) and
+        // perform value-based deduplication for sequential (indexed) arrays.
 
-        foreach ($matrix as $key => $subMatrix) {
-            unset($matrixAux[$key]);
+        $isAssoc = array_keys($matrix) !== range(0, count($matrix) - 1);
 
-            foreach ($matrixAux as $subMatrixAux) {
-                if ($subMatrix === $subMatrixAux) {
-                    // Or this
-                    // if($subMatrix[0] === $subMatrixAux[0]) {
-                    unset($matrix[$key]);
+        if ($isAssoc) {
+            // Keep first occurrence of each key only.
+            $result = [];
+            foreach ($matrix as $k => $v) {
+                if (! array_key_exists($k, $result)) {
+                    $result[$k] = $v;
+                }
+            }
+
+            return $result;
+        }
+
+        // Indexed array branch: linear de-dup preserving order.
+        $seen   = [];
+        $result = [];
+        foreach ($matrix as $item) {
+            $key = is_array($item)
+                ? 'a:' . json_encode($item, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                : 's:' . (string) $item;
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $result[]   = $item;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Returns the configured Twig cache directory path (ensures it exists).
+     */
+    public function getCachePath(): string
+    {
+        $this->createTwig();
+        $cache = $this->config['cache'] ?? '';
+        if (is_string($cache) && $cache !== '' && ! is_dir($cache)) {
+            @mkdir($cache, 0775, true);
+        }
+        return is_string($cache) ? $cache : '';
+    }
+
+    /**
+     * Clears compiled Twig templates. If $reinitialize is true, resets
+     * the Twig Environment so new templates will be recompiled lazily.
+     * Returns number of removed files.
+     */
+    public function clearCache(bool $reinitialize = false): int
+    {
+        $cachePath = $this->getCachePath();
+        if ($cachePath === '' || ! is_dir($cachePath)) {
+            return 0;
+        }
+        $removed = 0;
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($cachePath, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST
+        );
+        /** @var \SplFileInfo $file */
+        foreach ($iterator as $file) {
+            $path = $file->getPathname();
+            // Only remove files (keep directory structure)
+            if ($file->isFile()) {
+                if (@unlink($path)) {
+                    $removed++;
                 }
             }
         }
-
-        return $matrix;
+        if ($reinitialize) {
+            $this->resetTwig();
+        }
+    if (function_exists('log_message')) { log_message('info','event=twig.cache.cleared removed='.$removed.' reinit='.(int)$reinitialize); }
+        return $removed;
     }
+
+    /**
+     * Attempts to invalidate a single template's compiled cache file(s).
+     * Best-effort: Twig's default compiled filenames are hashes of the logical name,
+     * so we search for files containing the md5 of the logical template (with extension).
+     * Returns number of files removed.
+     */
+    public function invalidateTemplate(string $logicalName, bool $reinitialize = false): int
+    {
+        $this->createTwig();
+        $cacheDir = $this->getCachePath();
+        $removed = $this->invalidator->invalidateOne($logicalName, $cacheDir, $reinitialize, fn()=> $this->resetTwig(), function($level,$msg){ if(function_exists('log_message')){ log_message($level,$msg);} });
+        if ($removed>0) { $this->saveCompileIndex(); }
+        return $removed;
+    }
+
+    /**
+     * Precompiles (warms) a list of logical template names (without extension).
+     * Skips templates whose compiled cache already exists unless $force = true.
+     * Returns array with keys: compiled (int), skipped (int), errors (int).
+     *
+     * @param list<string> $templates
+     */
+    public function warmup(array $templates, bool $force = false): array
+    {
+        $this->createTwig();
+        $cacheDir = $this->getCachePath();
+        $compiled = $skipped = $errors = 0;
+        $this->loadCompileIndex();
+        foreach ($templates as $logical) {
+            $logical = trim($logical);
+            if ($logical === '') { continue; }
+            $name = $logical . $this->extension;
+            // Use cache manager state or heuristic file presence
+            $already = $this->cacheManager->isCompiled($logical) || $this->templateIsCompiled($name, $cacheDir);
+            if ($already && ! $force) {
+                $skipped++;
+                continue;
+            }
+            try {
+                // loadTemplate triggers compilation; discard returned template
+                $this->twig->load($name);
+                $this->cacheManager->markCompiled($logical);
+                $compiled++;
+                if (function_exists('log_message')) { log_message('info','event=twig.warmup.compiled template='.$logical); }
+            } catch (\Throwable $e) {
+                $errors++;
+                if (function_exists('log_message')) { log_message('error','event=twig.warmup.error template='.$logical.' message='.str_replace(['\n','\r'], ' ', $e->getMessage())); }
+            }
+        }
+        if ($compiled > 0) {
+            $this->saveCompileIndex();
+        }
+        return ['compiled' => $compiled, 'skipped' => $skipped, 'errors' => $errors];
+    }
+
+    /**
+     * Attempts to warm all templates discovered in configured loader paths.
+     * Only works for FilesystemLoader. Non-recursive by namespace; recursively scans directories.
+     */
+    public function warmupAll(bool $force = false): array
+    {
+        if (! $this->loader instanceof FilesystemLoader) {
+            return ['compiled' => 0, 'skipped' => 0, 'errors' => 0];
+        }
+        // Reuse discovery (benefits from in-process cache)
+        $templates = $this->listAllLogicalTemplates();
+        return $this->warmup($templates, $force);
+    }
+
+    /** Determine if a template already has a compiled cache file (heuristic). */
+    private function templateIsCompiled(string $templateWithExt, string $cacheDir): bool
+    {
+        if ($cacheDir === '' || ! is_dir($cacheDir)) { return false; }
+        $hash = md5($templateWithExt);
+        $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($cacheDir, \FilesystemIterator::SKIP_DOTS));
+        /** @var \SplFileInfo $fi */
+        foreach ($it as $fi) {
+            if ($fi->isFile() && strpos($fi->getFilename(), $hash) !== false) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Registers a Twig Extension dynamically. If the Environment already exists
+     * the extension is added immediately, otherwise it is queued.
+     *
+     * @param class-string<\Twig\Extension\ExtensionInterface> $extensionFqcn
+     */
+    public function registerExtension(string $extensionFqcn): self
+    {
+        if (! in_array($extensionFqcn, $this->pendingExtensions, true) && ! in_array($extensionFqcn, $this->extensions, true)) {
+            if ($this->twig !== null) {
+                try {
+                    $this->twig->addExtension(new $extensionFqcn());
+                    if (function_exists('log_message')) { log_message('info','event=twig.extension.registered extension='.$extensionFqcn); }
+                } catch (\LogicException $e) {
+                    // Extensions already initialized: queue and force recreation
+                    $this->pendingExtensions[] = $extensionFqcn;
+                    $this->twig = null;
+                    $this->functions_added = false;
+                    if (function_exists('log_message')) { log_message('info','event=twig.extension.queued_recreate extension='.$extensionFqcn); }
+                }
+            } else {
+                $this->pendingExtensions[] = $extensionFqcn;
+                if (function_exists('log_message')) { log_message('info','event=twig.extension.queued extension='.$extensionFqcn); }
+            }
+        }
+        return $this;
+    }
+
+    /** Unregister a previously registered Twig Extension (dynamic only, not those from config). */
+    public function unregisterExtension(string $extensionFqcn): bool
+    {
+        $removed = false;
+        // remove from pending first
+        $idx = array_search($extensionFqcn, $this->pendingExtensions, true);
+        if ($idx !== false) {
+            array_splice($this->pendingExtensions, $idx, 1);
+            $removed = true;
+        }
+        // extensions loaded at construction are in $this->extensions (config) – do not remove those
+        if ($removed && $this->twig !== null) {
+            // rebuild environment without extension
+            $this->twig = null;
+            $this->functions_added = false;
+        } elseif (!$removed && $this->twig !== null) {
+            // If the extension was added dynamically after creation we cannot introspect easily; force rebuild and skip re-adding
+            if (in_array($extensionFqcn, $this->extensions, true)) {
+                // cannot remove config extension
+                return false;
+            }
+            // There's a chance it's a dynamically added one not in pending (already applied). We rebuild and mark removed by preventing requeue.
+            $removed = true; // treat as removed for caller
+            $this->twig = null;
+            $this->functions_added = false;
+        }
+    if ($removed && function_exists('log_message')) { log_message('info','event=twig.extension.unregistered extension='.$extensionFqcn); }
+        return $removed;
+    }
+
+    /** Unregister a dynamically registered function. */
+    public function unregisterFunction(string $name): bool
+    {
+        $removed = $this->dynamicRegistry->unregisterFunction($name);
+        if ($removed) { $this->twig = null; $this->functions_added = false; }
+        return $removed;
+    }
+
+    /** Unregister a dynamically registered filter. */
+    public function unregisterFilter(string $name): bool
+    {
+        $removed = $this->dynamicRegistry->unregisterFilter($name);
+        if ($removed) { $this->twig = null; $this->functions_added = false; }
+        return $removed;
+    }
+
+    /** Disable template cache (optionally deleting existing compiled templates). */
+    public function disableCache(bool $deleteExisting = false): void
+    {
+        if ($deleteExisting) {
+            $this->clearCache(false);
+        }
+        $this->config['cache'] = false;
+        $this->twig = null;
+        $this->functions_added = false;
+    if (function_exists('log_message')) { log_message('info','event=twig.cache.disabled'); }
+    }
+
+    /** Enable template cache (optionally with custom path). */
+    public function enableCache(?string $path = null): void
+    {
+        if ($path !== null) {
+            $this->config['cache'] = $path;
+        } elseif (!isset($this->config['cache']) || $this->config['cache'] === false) {
+            // default path
+            $this->config['cache'] = WRITEPATH . 'cache' . DIRECTORY_SEPARATOR . 'twig';
+        }
+        $this->getCachePath(); // ensure exists
+        $this->twig = null;
+        $this->functions_added = false;
+    if (function_exists('log_message')) { log_message('info','event=twig.cache.enabled path='.$this->config['cache']); }
+    }
+
+    public function isCacheEnabled(): bool
+    {
+        return !empty($this->config['cache']);
+    }
+
+    /** Set autoescape strategy for a namespace (namespace without leading @). */
+    /**
+     * Set autoescape strategy for a namespace (pass string strategy like 'html','js','css' or false to disable).
+     * @param mixed $strategy string strategy or false
+     */
+    public function setAutoescapeForNamespace(string $namespace, $strategy): self
+    {
+        $namespace = ltrim($namespace, '@');
+        $this->autoescapeNamespaceMap[$namespace] = $strategy;
+        if ($this->twig !== null) {
+            $this->applyAutoescapeStrategy();
+        }
+    if (function_exists('log_message')) {
+        $strategyStr = is_bool($strategy) ? ($strategy ? 'true' : 'false') : (string)$strategy;
+        log_message('info','event=twig.autoescape.namespace.set namespace='.$namespace.' strategy='.$strategyStr);
+    }
+        return $this;
+    }
+
+    public function removeAutoescapeForNamespace(string $namespace): bool
+    {
+        $namespace = ltrim($namespace, '@');
+        if (!isset($this->autoescapeNamespaceMap[$namespace])) { return false; }
+        unset($this->autoescapeNamespaceMap[$namespace]);
+        if ($this->twig !== null) {
+            $this->applyAutoescapeStrategy();
+        }
+    if (function_exists('log_message')) { log_message('info','event=twig.autoescape.namespace.removed namespace='.$namespace); }
+        return true;
+    }
+
+    /** Apply current autoescape strategy map to the EscaperExtension. */
+    private function applyAutoescapeStrategy(): void
+    {
+        if ($this->twig === null) { return; }
+        try {
+            $ext = $this->twig->getExtension('Twig\\Extension\\EscaperExtension');
+            if (method_exists($ext, 'setDefaultStrategy')) {
+                $map = $this->autoescapeNamespaceMap;
+                $default = 'html';
+                $callable = static function(string $name) use ($map, $default): string|bool {
+                    // Determine namespace from template name (@ns/...) pattern
+                    if (isset($name[0]) && $name[0] === '@') {
+                        $pos = strpos($name, '/');
+                        if ($pos !== false) {
+                            $ns = substr($name, 1, $pos - 1);
+                            if (array_key_exists($ns, $map)) {
+                                return $map[$ns];
+                            }
+                        }
+                    }
+                    return $default; // fallback
+                };
+                $ext->setDefaultStrategy($map === [] ? 'html' : $callable);
+            }
+        } catch (\Throwable $e) {
+            // ignore; escaper extension not available yet
+        }
+    }
+
+    /** Get path to compile index file. */
+    public function getCompileIndexPath(): string
+    {
+        return rtrim($this->getCachePath(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'compile-index.json';
+    }
+
+    private function loadCompileIndex(): void
+    {
+        static $loaded = false;
+        if ($loaded) { return; }
+        $this->cacheManager->loadIndex($this->getCompileIndexPath());
+        $loaded = true;
+    }
+
+    private function saveCompileIndex(): void
+    {
+        $path = $this->getCompileIndexPath();
+        if ($path === '' || !is_dir(dirname($path))) { return; }
+        $this->cacheManager->saveIndex($path);
+    }
+
+    /**
+     * Public listing API.
+     * Parameters:
+     *  - $withStatus: include compiled status if true
+     *  - $namespace: filter by namespace (accepts with or without leading @). If null, returns all.
+     *  - $pattern: optional glob-like filter applied to the logical template (after namespace), supports * and ?
+     *      Examples: 'admin/*', 'emails/user_*', '*partial', 'dash??/index'
+     *      If $namespace provided, pattern does not need to repeat namespace (applies inside namespace root).
+     */
+    public function listTemplates(bool $withStatus = false, ?string $namespace = null, ?string $pattern = null): array
+    {
+        $names = $this->listAllLogicalTemplates();
+        // Normalize namespace
+        $nsFilter = null;
+        if ($namespace !== null && $namespace !== '') {
+            $nsFilter = ltrim($namespace, '@');
+        }
+        $filtered = [];
+        if ($nsFilter === null && $pattern === null) {
+            $filtered = $names; // fast path no filtering
+        } else {
+            // Pre-build regex if pattern has wildcards
+            $regex = null;
+            $hasWild = false;
+            if ($pattern !== null && $pattern !== '') {
+                $hasWild = strpbrk($pattern, '*?') !== false;
+                if ($hasWild) {
+                    // escape regex delimiters then replace wildcards
+                    $rx = preg_quote($pattern, '/');
+                    $rx = str_replace(['\\*','\\?'], ['.*','.?'], $rx);
+                    $regex = '/^' . $rx . '$/i';
+                }
+            }
+            foreach ($names as $logical) {
+                $logicalNs = null;
+                $logicalRemainder = $logical;
+                if (isset($logical[0]) && $logical[0] === '@') {
+                    $pos = strpos($logical, '/');
+                    if ($pos !== false) {
+                        $logicalNs = substr($logical, 1, $pos - 1);
+                        $logicalRemainder = substr($logical, $pos + 1);
+                    } else {
+                        $logicalNs = substr($logical, 1); // template directly under namespace
+                        $logicalRemainder = '';
+                    }
+                }
+                if ($nsFilter !== null) {
+                    if ($logicalNs !== $nsFilter) { continue; }
+                }
+                // Determine target name to match pattern against
+                $candidate = $nsFilter !== null ? $logicalRemainder : $logical;
+                if ($pattern === null || $pattern === '') {
+                    $filtered[] = $logical;
+                    continue;
+                }
+                if (!$hasWild) {
+                    // simple case-insensitive prefix match if pattern ends with * or exact match otherwise
+                    if ($pattern[strlen($pattern)-1] === '*') {
+                        $prefix = substr($pattern, 0, -1);
+                        if (stripos($candidate, $prefix) === 0) { $filtered[] = $logical; }
+                    } else {
+                        if (strcasecmp($candidate, $pattern) === 0) { $filtered[] = $logical; }
+                    }
+                    continue;
+                }
+                if ($regex && preg_match($regex, $candidate) === 1) {
+                    $filtered[] = $logical;
+                }
+            }
+        }
+        $this->loadCompileIndex();
+        if (!$withStatus) { return $filtered; }
+        $out = [];
+        foreach ($filtered as $n) {
+            $out[] = ['name' => $n, 'compiled' => $this->cacheManager->isCompiled($n)];
+        }
+        return $out;
+    }
+
+    /**
+     * Invalidate multiple logical templates at once.
+     * @param list<string> $logicalNames (without extension)
+     */
+    public function invalidateTemplates(array $logicalNames, bool $reinitialize = false): array
+    {
+        $this->createTwig();
+        $cacheDir = $this->getCachePath();
+        $result = $this->invalidator->invalidateMany($logicalNames, $cacheDir, $reinitialize, fn()=> $this->resetTwig(), function($level,$msg){ if(function_exists('log_message')){ log_message($level,$msg);} });
+        if ($result['removed']>0) { $this->saveCompileIndex(); }
+        return $result;
+    }
+
+    /**
+     * Invalidate all templates in a given namespace (e.g. "@admin") or root if null.
+     * Namespace should include leading '@'.
+     */
+    public function invalidateNamespace(?string $namespace, bool $reinitialize = false): array
+    {
+        $this->createTwig();
+        if (! $this->loader instanceof FilesystemLoader) { return ['removed'=>0,'templates'=>[],'reinit'=>false]; }
+        $cacheDir = $this->getCachePath();
+        $result = $this->invalidator->invalidateNamespace($namespace, $cacheDir, $reinitialize, $this->loader, fn()=> $this->resetTwig(), function($level,$msg){ if(function_exists('log_message')){ log_message($level,$msg);} });
+        if ($result['removed']>0) { $this->saveCompileIndex(); }
+        return $result;
+    }
+
+    /**
+     * Discover all logical template names currently available (without filtering by compilation state).
+     * Used for namespace invalidation & potential future listing.
+     * @return list<string>
+     */
+    private function listAllLogicalTemplates(): array
+    {
+        $this->createTwig();
+        if (! $this->loader instanceof FilesystemLoader) { return []; }
+        return $this->discovery->listAll($this->loader, $this->extension);
+    }
+
+    /**
+     * Helper to extract the internal paths map from the loader safely.
+     * @return array<string,array<string>>
+     */
+    private function getLoaderPathsMap(): array
+    {
+        if (!$this->loader instanceof FilesystemLoader) { return []; }
+        // Reuse discovery's reflection to avoid duplication (temporary until full extraction phases complete)
+        // Slightly inefficient: we call discovery->listAll solely to derive unique paths; acceptable for refactor stage.
+        // TODO Stage2+: Move this logic to dedicated Cache/Discovery service entirely.
+        try {
+            $ref = new \ReflectionObject($this->loader);
+            if (!$ref->hasProperty('paths')) { return []; }
+            $prop = $ref->getProperty('paths');
+            $prop->setAccessible(true);
+            $pathsMap = $prop->getValue($this->loader);
+            return is_array($pathsMap) ? $pathsMap : [];
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    // compiledHash moved to TemplateInvalidator (centralized)
+
+    // End of class
 }

@@ -9,9 +9,15 @@ class Twig extends BaseConfig
     public string $extension = '.twig';
 
     /**
+     * Optional custom cache directory for compiled Twig templates.
+     * If null, the library default WRITEPATH.'cache/twig' is used.
+     */
+    public ?string $cachePath = null;
+
+    /**
      * @var list<string> functions_safe
      */
-    public array $functions_safe = ['form_open', 'form_close', 'form_hidden', 'json_decode', 'form_error', 'form_hidden', 'set_value', 'csrf_field'];
+    public array $functions_safe = ['form_open', 'form_close', 'form_hidden', 'json_decode', 'form_error', 'set_value', 'csrf_field'];
 
     /**
      * @var list<string> functions_asis
@@ -47,6 +53,13 @@ class Twig extends BaseConfig
     public array $extensions = [];
 
     /**
+     * When true, Twig will throw exceptions on undefined variables.
+     * Mirrors Twig Environment option 'strict_variables'. Default false
+     * to keep backward-compatible behavior.
+     */
+    public bool $strictVariables = false;
+
+    /**
      * When false, the view method will clear the data between each
      * call. This keeps your data safe and ensures there is no accidental
      * leaking between calls, so you would need to explicitly pass the data
@@ -55,4 +68,10 @@ class Twig extends BaseConfig
      * set $saveData to true.
      */
     public bool $saveData = true;
+
+    /**
+     * Minimum PSR-3 log level to emit when a logger is attached.
+     * Accepts one of: emergency, alert, critical, error, warning, notice, info, debug
+     * Default: debug (emit all). Example override: $loggerMinLevel = 'info';
+     */
 }

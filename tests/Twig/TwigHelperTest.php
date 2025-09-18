@@ -27,22 +27,15 @@ final class TwigHelperTest extends CIUnitTestCase
 
         $this->twig = new Twig($this->config);
 
-        $loader = new ArrayLoader(
-            [
-                'base_url' => '{{ base_url(\'"><s>abc</s><a name="test\') }}',
-                'site_url' => '{{ site_url(\'"><s>abc</s><a name="test\') }}',
-                'anchor'   => '{{ anchor(uri, title, attributes) }}',
-            ]
-        );
-        $setLoader = $this->getPrivateMethodInvoker($this->twig, 'setLoader');
-        $setLoader($loader);
+        $loader = new ArrayLoader([
+            // Keys must include .twig because wrapper appends extension.
+            'base_url.twig' => "{{ base_url('\"><s>abc</s><a name=\"test') }}",
+            'site_url.twig' => "{{ site_url('\"><s>abc</s><a name=\"test') }}",
+            'anchor.twig'   => '{{ anchor(uri, title, attributes) }}',
+        ]);
 
-        $this->twig->resetTwig();
-
-        $addFunctions = $this->getPrivateMethodInvoker($this->twig, 'addFunctions');
-        $addFunctions();
-
-        $this->twig = $this->twig->getTwig();
+        // Use new public API instead of reflection hacks
+        $this->twig->withLoader($loader);
     }
 
     public static function setUpBeforeClass(): void
@@ -82,6 +75,7 @@ final class TwigHelperTest extends CIUnitTestCase
         $actual   = $this->twig->render('base_url');
         $expected = 'http://localhost/%22%3E%3Cs%3Eabc%3C/s%3E%3Ca%20name=%22test';
         $this->assertSame($expected, $actual);
+        $this->assertTrue($this->getPrivateProperty($this->twig, 'functions_added'));
     }
 
     public function testSiteUrl()
