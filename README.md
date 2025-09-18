@@ -141,6 +141,46 @@ Toolbar.php file
 
 ## Advanced Features
 
+### Caching & Persistence Overview
+
+This integration implements a multi-layer caching architecture covering:
+1. Compiled template classes (filesystem or CI cache backend)
+2. Compile index (logical template -> compiled flag)
+3. Template discovery stats + optional snapshot (with fingerprint & APCu acceleration)
+4. Warmup summary persistence
+5. Invalidation state (last + cumulative)
+
+You can switch the compiled template backend to Redis/Memcached/etc. via:
+```php
+$config->cacheBackend = 'ci';      // default 'file'
+$config->cachePrefix  = null;      // derive from Config\Cache::$prefix + 'twig_'
+$config->cacheTtl     = 0;         // no expiry
+```
+
+Discovery performance tuning:
+```php
+$config->discoveryPersistList           = true; // persist list snapshot
+$config->discoveryPreload               = true; // preload snapshot each request
+$config->discoveryUseAPCu               = true; // APCu cross-process reuse
+$config->discoveryFingerprintMtimeDepth = 0;    // dir mtime depth
+```
+
+Warm all templates once after deployment:
+```
+php spark twig:warmup --all
+```
+
+Clear everything (compiled + persisted artifacts):
+```
+php spark twig:clear-cache --reinit
+```
+
+See full details, key layout, and troubleshooting in `docs/CACHING.md`.
+
+### Further Reading
+- `docs/SERVICES.md` – Modular internal services (Discovery, CacheManager, DynamicRegistry, Invalidator)
+- `docs/PERFORMANCE.md` – Warmup strategy, discovery tuning, invalidation efficiency, diagnostics interpretation
+
 ### Custom Loader Injection
 
 Replace the internal loader (e.g. use an in-memory `ArrayLoader` for tests):

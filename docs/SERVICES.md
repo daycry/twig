@@ -25,6 +25,50 @@ Advanced Use:
 - Subclass to support exotic loaders; override how paths are collected.
 - Wrap to add timing metrics for discovery operations.
 
+### 1.1 Algorithm (FilesystemLoader)
+1. Reflect `$loader->paths` (namespaces => array of base directories).
+2. Canonicalize: `realpath`, normalize slashes, sort namespaces & paths.
+3. Generate context hash: `md5(class|extension|json(canonical_paths_map))`.
+4. Fast path: if in-memory cache present & context hash matches → HIT.
+5. If preloaded snapshot present (cache filled but no `contextHash` yet): verify fingerprint → promote to HIT.
+6. Else (cold): recursive directory iteration per base path collecting files ending in extension; build logical names (prepend `@ns/` when namespace != main).
+7. Persist fingerprint & optionally list snapshot (if configured) + stats.
+
+### 1.2 Fingerprint
+```
+fingerprint = sha1(json_encode([
+	canonical_paths_map,   // sorted
+	per_namespace: {
+		 path => sampled_mtime_hash(depth)
+	}
+]))
+```
+`sampled_mtime_hash` XORs directory mtimes breadth‑first up to configured depth. Depth 0: only root directories.
+
+### 1.3 Performance Characteristics
+| Mode | Cost | When |
+|------|------|------|
+| Cold Scan | O(F) where F = number of files (I/O bound) | First request / fingerprint change |
+| Snapshot Restore | O(P) where P = number of paths (stat + json decode) | After cold once |
+| APCu Restore | O(1) key fetch + array copy | When APCu enabled & hot |
+| Preload Verify | O(P) for fingerprint recompute | Each process start with preload enabled |
+
+### 1.4 Tuning Guidance
+| Symptom | Adjustment |
+|---------|------------|
+| Frequent unnecessary scans | Enable `discoveryPersistList` + `discoveryPreload` |
+| Snapshot invalidation too sensitive | Lower `discoveryFingerprintMtimeDepth` |
+| Changes not detected quickly | Raise depth to 1–2 |
+| High multi-process duplication | Enable `discoveryUseAPCu` |
+
+### 1.5 Failure Modes (Graceful)
+| Failure | Fallback |
+|---------|----------|
+| Corrupt snapshot JSON | Full scan |
+| APCu unavailable | Snapshot or scan |
+| CI cache miss | Snapshot file or scan |
+| Fingerprint mismatch | Full scan + new fingerprint |
+
 ## 2. TemplateCacheManager
 
 Location: `Daycry\Twig\Cache\TemplateCacheManager`
@@ -60,6 +104,34 @@ Usage Notes:
 - The facade determines `envReady` (whether core built-ins already loaded) and passes the current `Environment` instance.
 - You can build higher-level registrars (e.g. annotation scanners) that ultimately call these methods.
 
+### 3.1 Options Matrix (Twig Native)
+| Option | Applies To | Type | Effect |
+|--------|-----------|------|--------|
+| `is_safe` | function/filter | array<string> | Marks output safe for listed contexts (e.g. `['html']`) |
+| `needs_environment` | function/filter | bool | First parameter becomes `\Twig\Environment` |
+| `needs_context` | function/filter | bool | First parameter becomes template context array |
+| `is_variadic` | function/filter | bool | Collect trailing args into array |
+| `deprecated` | function/filter | string|bool | Triggers deprecation notice |
+| `pre_escape` | filter | string | Force pre-escape strategy |
+| `preserves_safety` | filter | array<string> | Propagate safety flags |
+
+Backward compatible Boolean shorthand in facade:
+```php
+$twig->registerFunction('raw_html', fn()=>'<b>X</b>', true); // translates to ['is_safe'=>['html']]
+```
+
+### 3.2 Lifecycle States
+| State | Description |
+|-------|-------------|
+| Pending | Registered before environment build; queued |
+| Active  | Applied to current environment |
+| Removed | Unregistered; triggers environment reset at next render to fully detach |
+
+### 3.3 Unregistration Semantics
+- Removing a function/filter invalidates only dynamic registrations.
+- Facade nulls environment to ensure Twig reconstructs symbol table (cheap on next render).
+- Idempotent: double removal returns false.
+
 ## 4. TemplateInvalidator
 
 Location: `Daycry\Twig\Invalidation\TemplateInvalidator`
@@ -77,11 +149,54 @@ Return Shapes:
 Optimization:
 - For batches the cache directory is scanned once and matched against a hash map of requested logical names, drastically cutting I/O.
 
+### 4.1 Complexity
+| Operation | Complexity (File Backend) |
+|-----------|---------------------------|
+| Single | O(F) worst-case (iterator scan) |
+| Batch N | O(F + N) with hash short-circuit |
+| Namespace | O(F_ns) where F_ns = files under selected namespace paths |
+
+CI backend (key-value) reduces all operations to O(N) deletes (no directory scan) since compiled keys are known via adapter index.
+
+### 4.2 Side Effects
+- Updates compile index (removes logical entries)
+- Persists invalidation state (cumulative + last)
+- Optional environment reset (`--reinit` flag or parameter)
+
+### 4.3 Namespace Resolution
+1. Discovery list (possibly restored) enumerated.
+2. Filter list by prefix `@ns/` (or non-prefixed for root).
+3. Delegate to batch invalidation.
+
+### 4.4 Safety Considerations
+Compiled filename strategy relies on md5 of logical filename + extension substring match. Probability of false positive extremely low for typical directory sizes; any collision would only over-delete extra compiled classes (safe fallback: recompilation).
+
 ## Lifecycle (Render / Warmup / Invalidate)
 
 1. `render()` → Lazy-create Environment → apply static + queued dynamic functions/filters → render (compilation occurs if not already cached) → mark compiled.
 2. `warmup([...])` → Ensure compile index loaded → `twig->load()` each logical template → mark newly compiled → persist index if changed.
 3. `invalidateTemplate(s)/invalidateNamespace()` → Determine affected compiled files → delete → update `TemplateCacheManager` set → persist index if changed → optionally reinitialize environment.
+
+### 5. Performance Instrumentation
+`Twig::getDiagnostics()` exposes:
+| Key | Meaning |
+|-----|---------|
+| `renders` | Total successful render calls this request lifecycle |
+| `performance.total_render_time_ms` | Sum of measured render durations (wall clock) |
+| `performance.avg_render_time_ms` | Average per render (total / renders) |
+| `cache.compiled_templates` | Count of logical templates marked compiled (from index) |
+| `discovery.hits/misses` | Discovery cache reuse vs scans |
+| `discovery.cache_source` | `scan` / `persisted` / `persisted-preload` / `apcu` |
+| `invalidations.cumulative_removed` | Total compiled files removed since start or persisted state |
+| `warmup.summary` | Last warmup compile/skip/error counts |
+
+Interpretation Tips:
+- High `misses` with stable template tree → enable snapshot & preload.
+- Large gap between `compiled_templates` and template list size → run warmup or investigate missing paths.
+- Rising avg render time → inspect custom filters/functions or enable opcode cache if disabled.
+
+### 5.1 Measuring Additional Metrics
+Hook into render pipeline by wrapping `Twig::render()` or by post-processing diagnostics; avoid internal service mutation. For deep profiling use Xdebug or Blackfire.
 
 ## Combined Examples
 
