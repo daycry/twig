@@ -45,7 +45,7 @@ final class UrlHelperTest extends CIUnitTestCase
         $actual = anchor(
             'news/local/123',
             'My News',
-            ['title' => 'The best news!']
+            ['title' => 'The best news!'],
         );
 
         $expected = '<a href="http://localhost/index.php/news/local/123" title="The best news!">My News</a>';
@@ -54,7 +54,7 @@ final class UrlHelperTest extends CIUnitTestCase
         $actual = anchor(
             'news/local/123',
             '<s>abc</s>',
-            ['<s>name</s>' => '<s>val</s>']
+            ['<s>name</s>' => '<s>val</s>'],
         );
 
         $expected = '<a href="http://localhost/index.php/news/local/123" <s>name</s>="&lt;s&gt;val&lt;/s&gt;"><s>abc</s></a>';

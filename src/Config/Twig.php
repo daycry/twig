@@ -70,8 +70,48 @@ class Twig extends BaseConfig
     public bool $saveData = true;
 
     /**
-     * Minimum PSR-3 log level to emit when a logger is attached.
-     * Accepts one of: emergency, alert, critical, error, warning, notice, info, debug
-     * Default: debug (emit all). Example override: $loggerMinLevel = 'info';
+     * When true, the discovery service will persist also the full list of templates
+     * (not only counters) alongside a fingerprint. On a subsequent request, if the
+     * fingerprint matches, the in-memory cache can be restored without scanning.
      */
+    public bool $discoveryPersistList = false;
+
+    /**
+     * When true (and discoveryPersistList enabled), the template list is eagerly
+     * loaded from the persisted snapshot during diagnostics/list operations if
+     * no in-process cache exists and fingerprint matches.
+     */
+    public bool $discoveryPreload = false;
+
+    /**
+     * Use APCu (if extension loaded and enabled) to cache the discovered list
+     * across processes. Falls back gracefully to filesystem JSON snapshot.
+     */
+    public bool $discoveryUseAPCu = false;
+
+    /**
+     * Depth for directory mtime sampling in fingerprint calculation.
+     * 0 = only root template directories; 1 = include immediate subdirectories, etc.
+     * Higher values increase fingerprint accuracy at cost of extra stat() calls.
+     */
+    public int $discoveryFingerprintMtimeDepth = 0;
+
+    /**
+     * Backend used for Twig compiled template cache.
+     *  - 'file' (default): filesystem path in $cachePath (or default WRITEPATH/cache/twig)
+     *  - 'ci' : use the CodeIgniter cache service (redis, memcached, etc. as configured)
+     */
+    public string $cacheBackend = 'file';
+
+    /**
+     * Prefix for CI cache backend keys (only used when cacheBackend = 'ci').
+     * If null, the library will derive it from Config\Cache::$prefix concatenated with 'twig_'.
+     * Example: if Config\Cache::$prefix = 'app_', final prefix becomes 'app_twig_'.
+     */
+    public ?string $cachePrefix = null;
+
+    /**
+     * TTL seconds for CI cache entries (0 = no expiry).
+     */
+    public int $cacheTtl = 0;
 }

@@ -1,9 +1,10 @@
 <?php
+
 namespace Tests\Twig;
 
 use CodeIgniter\Test\CIUnitTestCase;
-use Daycry\Twig\Twig;
 use Daycry\Twig\Config\Twig as TwigConfig;
+use Daycry\Twig\Twig;
 
 /** @internal */
 final class TwigBatchInvalidateTest extends CIUnitTestCase
@@ -13,10 +14,10 @@ final class TwigBatchInvalidateTest extends CIUnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        helper(['url','form','twig_helper']);
-        $config = new TwigConfig();
+        helper(['url', 'form', 'twig_helper']);
+        $config        = new TwigConfig();
         $config->paths = ['./tests/_support/Templates/'];
-        $this->twig = new Twig($config);
+        $this->twig    = new Twig($config);
     }
 
     public function testBatchInvalidationNoReinit(): void
@@ -24,7 +25,7 @@ final class TwigBatchInvalidateTest extends CIUnitTestCase
         // warm/templates compile
         $this->twig->render('welcome');
         $this->twig->render('sub/nested'); // assume exists if not test will still pass removed=0
-        $summary = $this->twig->invalidateTemplates(['welcome','sub/nested']);
+        $summary = $this->twig->invalidateTemplates(['welcome', 'sub/nested']);
         $this->assertArrayHasKey('removed', $summary);
         $this->assertIsInt($summary['removed']);
         $this->assertFalse($summary['reinit']);

@@ -51,7 +51,7 @@ final class TwigHelperTest extends CIUnitTestCase
                 'uri'        => 'news/local/123',
                 'title'      => 'My News',
                 'attributes' => ['title' => 'The best news!'],
-            ]
+            ],
         );
 
         $expected = '<a href="http://localhost/index.php/news/local/123" title="The best news!">My News</a>';
@@ -63,7 +63,7 @@ final class TwigHelperTest extends CIUnitTestCase
                 'uri'        => 'news/local/123',
                 'title'      => '<s>abc</s>',
                 'attributes' => ['<s>name</s>' => '<s>val</s>'],
-            ]
+            ],
         );
 
         $expected = '<a href="http://localhost/index.php/news/local/123" &lt;s&gt;name&lt;/s&gt;="&lt;s&gt;val&lt;/s&gt;">&lt;s&gt;abc&lt;/s&gt;</a>';

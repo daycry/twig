@@ -4,16 +4,22 @@ namespace Tests\Twig;
 
 use CodeIgniter\Test\CIUnitTestCase;
 use Daycry\Twig\Twig;
+use FilesystemIterator;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 
+/**
+ * @internal
+ */
 final class TwigCacheToggleTest extends CIUnitTestCase
 {
     public function testDisableEnableCache(): void
     {
-        $cfg = new \Daycry\Twig\Config\Twig();
-        $cfg->paths = [__DIR__.'/../_support/Templates'];
-        $twig = new Twig($cfg);
+        $cfg        = new \Daycry\Twig\Config\Twig();
+        $cfg->paths = [__DIR__ . '/../_support/Templates'];
+        $twig       = new Twig($cfg);
         $twig->warmup(['welcome']); // compile something
-        $path = $twig->getCachePath();
+        $path        = $twig->getCachePath();
         $filesBefore = $this->countTwigCacheFiles($path);
         $this->assertGreaterThan(0, $filesBefore);
 
@@ -33,10 +39,18 @@ final class TwigCacheToggleTest extends CIUnitTestCase
 
     private function countTwigCacheFiles(string $path): int
     {
-        if ($path === '' || !is_dir($path)) { return 0; }
-        $c = 0;
-        $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS));
-        foreach ($it as $f) { if ($f->isFile()) { $c++; } }
+        if ($path === '' || ! is_dir($path)) {
+            return 0;
+        }
+        $c  = 0;
+        $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS));
+
+        foreach ($it as $f) {
+            if ($f->isFile()) {
+                $c++;
+            }
+        }
+
         return $c;
     }
 }

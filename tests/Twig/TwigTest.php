@@ -179,12 +179,12 @@ final class TwigTest extends CIUnitTestCase
 
     public function testDuplicatePathsAreRemoved()
     {
-        $config          = new TwigConfig();
-        $config->paths   = ['./tests/_support/Templates/', './tests/_support/Templates/'];
-        $twig            = new Twig($config);
-        $paths           = $twig->getPaths();
+        $config        = new TwigConfig();
+        $config->paths = ['./tests/_support/Templates/', './tests/_support/Templates/'];
+        $twig          = new Twig($config);
+        $paths         = $twig->getPaths();
         // default APPPATH.'Views' + one deduplicated custom path = 2
         $this->assertCount(2, $paths);
-        $this->assertSame(['./tests/_support/Templates/'], array_values(array_filter($paths, static fn($p) => $p === './tests/_support/Templates/')));
+        $this->assertSame(['./tests/_support/Templates/'], array_values(array_filter($paths, static fn ($p) => $p === './tests/_support/Templates/')));
     }
 }

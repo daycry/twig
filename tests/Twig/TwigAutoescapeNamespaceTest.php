@@ -5,6 +5,9 @@ namespace Tests\Twig;
 use CodeIgniter\Test\CIUnitTestCase;
 use Daycry\Twig\Twig;
 
+/**
+ * @internal
+ */
 final class TwigAutoescapeNamespaceTest extends CIUnitTestCase
 {
     public function testNamespaceAutoescapeHtmlVsRaw(): void
@@ -13,7 +16,7 @@ final class TwigAutoescapeNamespaceTest extends CIUnitTestCase
         // Simulate namespace strategies (callback inspects template logical name beginning with @ns/ )
         $twig->setAutoescapeForNamespace('rawns', false); // disable escaping for this namespace
         $twig->setAutoescapeForNamespace('htmlns', 'html'); // ensure explicit html strategy
-        $env = $twig->getTwig();
+        $env    = $twig->getTwig();
         $unsafe = '<b>X</b>';
         // Since createTemplate does not include namespace in name, emulate by manually invoking EscaperExtension strategy via rendering two templates:
         $tplHtml = $env->createTemplate('{{ value }}');

@@ -14,11 +14,11 @@ final class TwigInvalidateTemplateReinitTest extends CIUnitTestCase
 {
     public function testInvalidateTemplateWithReinitializeReflectsSourceChange()
     {
-        $config = new TwigConfig();
-        $config->paths = [];
+        $config            = new TwigConfig();
+        $config->paths     = [];
         $config->cachePath = WRITEPATH . 'cache' . DIRECTORY_SEPARATOR . 'twig_invalidate_reinit';
-        $loader = new ArrayLoader([
-            'sample.twig' => 'Version A'
+        $loader            = new ArrayLoader([
+            'sample.twig' => 'Version A',
         ]);
         $twig = new Twig($config);
         $twig->withLoader($loader);

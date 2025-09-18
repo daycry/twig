@@ -9,8 +9,11 @@ namespace Daycry\Twig\Cache;
  */
 class TemplateCacheManager
 {
-    /** @var array<string,bool> */
+    /**
+     * @var array<string,bool>
+     */
     private array $compiledTemplates = [];
+
     private bool $compileIndexLoaded = false;
     private string $extension;
     private $logger; // callable|string|null log_message compatibility
@@ -18,13 +21,19 @@ class TemplateCacheManager
     public function __construct(string $extension, $logger = null)
     {
         $this->extension = $extension;
-        $this->logger = $logger; // optional callable(level,string)
+        $this->logger    = $logger; // optional callable(level,string)
     }
 
-    /** Inject compiledTemplates array if already known (for warm restarts). */
+    /**
+     * Inject compiledTemplates array if already known (for warm restarts).
+     */
     public function seedCompiled(array $names): void
     {
-        foreach ($names as $n) { if (is_string($n)) { $this->compiledTemplates[$n] = true; } }
+        foreach ($names as $n) {
+            if (is_string($n)) {
+                $this->compiledTemplates[$n] = true;
+            }
+        }
         $this->compileIndexLoaded = true; // assume authoritative
     }
 
@@ -43,10 +52,14 @@ class TemplateCacheManager
         unset($this->compiledTemplates[$logical]);
     }
 
-    /** Load compile index if present. */
+    /**
+     * Load compile index if present.
+     */
     public function loadIndex(string $indexPath): void
     {
-        if ($this->compileIndexLoaded) { return; }
+        if ($this->compileIndexLoaded) {
+            return;
+        }
         if (is_file($indexPath)) {
             $json = @file_get_contents($indexPath);
             if ($json !== false) {
@@ -63,16 +76,24 @@ class TemplateCacheManager
         $this->compileIndexLoaded = true;
     }
 
-    /** Persist compile index (creates file if directory exists). */
+    /**
+     * Persist compile index (creates file if directory exists).
+     */
     public function saveIndex(string $indexPath): void
     {
-        if (!$this->compileIndexLoaded) { $this->compileIndexLoaded = true; }
+        if (! $this->compileIndexLoaded) {
+            $this->compileIndexLoaded = true;
+        }
         $dir = dirname($indexPath);
-        if (!is_dir($dir)) { return; }
+        if (! is_dir($dir)) {
+            return;
+        }
         @file_put_contents($indexPath, json_encode($this->compiledTemplates, JSON_PRETTY_PRINT));
     }
 
-    /** Convenience: test if logical name is marked compiled (from index or current session). */
+    /**
+     * Convenience: test if logical name is marked compiled (from index or current session).
+     */
     public function isCompiled(string $logical): bool
     {
         return isset($this->compiledTemplates[$logical]);

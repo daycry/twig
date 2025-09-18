@@ -18,7 +18,7 @@ final class TwigLoaderTest extends CIUnitTestCase
         $twig   = new Twig($config);
 
         $loader = new ArrayLoader([
-            'inline.twig' => 'Hello {{ name }}'
+            'inline.twig' => 'Hello {{ name }}',
         ]);
 
         $twig->withLoader($loader);

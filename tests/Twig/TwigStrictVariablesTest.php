@@ -15,11 +15,11 @@ final class TwigStrictVariablesTest extends CIUnitTestCase
 {
     public function testUndefinedVariableNotStrict()
     {
-        $config = new TwigConfig();
+        $config        = new TwigConfig();
         $config->paths = []; // we will inject loader
-        $twig   = new Twig($config);
+        $twig          = new Twig($config);
         $twig->withLoader(new ArrayLoader([
-            'u.twig' => 'Value: {{ missingVar|default("fallback") }}'
+            'u.twig' => 'Value: {{ missingVar|default("fallback") }}',
         ]));
 
         $output = $twig->render('u');
@@ -28,11 +28,11 @@ final class TwigStrictVariablesTest extends CIUnitTestCase
 
     public function testUndefinedVariableStrictThrows()
     {
-        $config = new TwigConfig();
+        $config                  = new TwigConfig();
         $config->strictVariables = true;
-        $twig   = new Twig($config);
+        $twig                    = new Twig($config);
         $twig->withLoader(new ArrayLoader([
-            'u.twig' => 'Value: {{ missingVar }}'
+            'u.twig' => 'Value: {{ missingVar }}',
         ]));
 
         $this->expectException(RuntimeError::class);
