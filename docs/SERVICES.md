@@ -37,29 +37,29 @@ Advanced Use:
 ### 1.2 Fingerprint
 ```
 fingerprint = sha1(json_encode([
-	canonical_paths_map,   // sorted
-	per_namespace: {
-		 path => sampled_mtime_hash(depth)
-	}
+    canonical_paths_map,   // sorted
+    per_namespace: {
+        path => sampled_mtime_hash()
+    }
 ]))
 ```
-`sampled_mtime_hash` XORs directory mtimes breadth‑first up to configured depth. Depth 0: only root directories.
+`sampled_mtime_hash` XORs root directory mtimes (depth now fixed/shallow after simplification; previous configurable depth removed).
 
 ### 1.3 Performance Characteristics
 | Mode | Cost | When |
 |------|------|------|
 | Cold Scan | O(F) where F = number of files (I/O bound) | First request / fingerprint change |
-| Snapshot Restore | O(P) where P = number of paths (stat + json decode) | After cold once |
-| APCu Restore | O(1) key fetch + array copy | When APCu enabled & hot |
-| Preload Verify | O(P) for fingerprint recompute | Each process start with preload enabled |
+| Snapshot Restore | O(P) (paths stat + JSON decode) | Full profile or lean+override after initial scan |
+| APCu Restore | O(1) key fetch + array copy | When snapshot active & APCu enabled |
+| Fingerprint Verify | O(P) recompute | Automatic when snapshot active (implicit preload) |
 
-### 1.4 Tuning Guidance
-| Symptom | Adjustment |
-|---------|------------|
-| Frequent unnecessary scans | Enable `discoveryPersistList` + `discoveryPreload` |
-| Snapshot invalidation too sensitive | Lower `discoveryFingerprintMtimeDepth` |
-| Changes not detected quickly | Raise depth to 1–2 |
-| High multi-process duplication | Enable `discoveryUseAPCu` |
+### 1.4 Operational Guidance
+| Symptom | Recommendation |
+|---------|----------------|
+| Frequent unnecessary scans (low hits) | Use full profile (`leanMode = false`) or force snapshot via `enableDiscoverySnapshot = true` |
+| Need absolute minimum overhead | Stay in lean profile (no snapshot) |
+| Large template set, want lean diagnostics | Lean + `enableDiscoverySnapshot = true` |
+| Multi-process duplication | Ensure snapshot active; APCu auto-used if extension present |
 
 ### 1.5 Failure Modes (Graceful)
 | Failure | Fallback |
@@ -191,7 +191,7 @@ Compiled filename strategy relies on md5 of logical filename + extension substri
 | `warmup.summary` | Last warmup compile/skip/error counts |
 
 Interpretation Tips:
-- High `misses` with stable template tree → enable snapshot & preload.
+- High `misses` with stable template tree → confirm you're not in lean mode without snapshot override (`enableDiscoverySnapshot`).
 - Large gap between `compiled_templates` and template list size → run warmup or investigate missing paths.
 - Rising avg render time → inspect custom filters/functions or enable opcode cache if disabled.
 

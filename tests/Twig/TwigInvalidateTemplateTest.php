@@ -25,6 +25,9 @@ final class TwigInvalidateTemplateTest extends CIUnitTestCase
         // First render to (potentially) create compiled file
         $this->assertSame('Value 1', $twig->render('temp', ['v' => 1]));
         $cacheDir = $twig->getCachePath();
+        if ($cacheDir === '') {
+            $this->markTestSkipped('Filesystem cache disabled (CI cache backend auto-detected).');
+        }
 
         // Simulate absence of an actual compiled file by creating a fake one matching pattern
         $hash  = md5('temp.twig');

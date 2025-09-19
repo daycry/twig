@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.1.0] - 2025-09-19
+### Added
+- Automatic discovery snapshot + preload + APCu acceleration in full profile (no manual flags needed).
+- Lean Mode capability profile with nullable overrides (`enableDiscoverySnapshot`, `enableWarmupSummary`, `enableInvalidationHistory`, `enableDynamicMetrics`, `enableExtendedDiagnostics`).
+- Autodetected cache backend (CI cache service preferred, filesystem fallback) with automatic prefix derivation.
+- Expanded diagnostics: render timing, discovery cache source, warmup summary, invalidation history (gated by capabilities).
+
+### Changed
+- Configuration surface simplified: discovery micro-tuning flags removed from docs; behavior is profile-driven.
+- Snapshot persistence: always on in full profile; opt-in via override in Lean Mode.
+- Fingerprint strategy depth fixed (previous configurable depth removed).
+
+### Removed
+- Legacy documentation of tuning flags and deprecated cache backend keys (docs now show only current configuration model).
+
+### Guidance
+Use `leanMode = false` for maximum automatic acceleration & observability. Use `leanMode = true` for minimal overhead, optionally re‑enabling specific capabilities with the nullable overrides.
+
 ## [3.0.0] - 2025-09-18
 ### Added
 - Modular services: `TemplateDiscovery`, `TemplateCacheManager`, `DynamicRegistry`, `TemplateInvalidator`.

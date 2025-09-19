@@ -11,11 +11,11 @@ final class TwigCiCacheTest extends CIUnitTestCase
 {
     public function testCiCacheBackendRendersAndReuses()
     {
-        $config               = new TwigConfig();
-        $config->paths        = ['./tests/_support/Templates/'];
-        $config->cacheBackend = 'ci';
-        $config->cachePrefix  = 'twig_test_';
-        $twig                 = new Twig($config);
+        $config        = new TwigConfig();
+        $config->paths = ['./tests/_support/Templates/'];
+        // cacheBackend deprecated/ignored; auto-detection should still pick CI service
+        $config->cachePrefix = 'twig_test_';
+        $twig                = new Twig($config);
 
         // First render (compilation)
         $out1 = $twig->render('welcome', ['name' => 'CI']);
@@ -27,7 +27,8 @@ final class TwigCiCacheTest extends CIUnitTestCase
         $this->assertSame($out1, $out2);
         $diag2 = $twig->getDiagnostics();
 
-        $this->assertSame($diag1['cache']['backend'], $diag2['cache']['backend']);
-        $this->assertStringStartsWith('ci:', $diag2['cache']['backend']);
+        $this->assertSame($diag1['cache']['mode'], $diag2['cache']['mode']);
+        $this->assertSame('service', $diag2['cache']['mode']);
+        $this->assertNotEmpty($diag2['cache']['service_class']);
     }
 }

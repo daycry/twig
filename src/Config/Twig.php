@@ -12,7 +12,7 @@ class Twig extends BaseConfig
      * Optional custom cache directory for compiled Twig templates.
      * If null, the library default WRITEPATH.'cache/twig' is used.
      */
-    public ?string $cachePath = null;
+    public string $cachePath = WRITEPATH . 'cache/twig';
 
     /**
      * @var list<string> functions_safe
@@ -69,49 +69,71 @@ class Twig extends BaseConfig
      */
     public bool $saveData = true;
 
-    /**
-     * When true, the discovery service will persist also the full list of templates
-     * (not only counters) alongside a fingerprint. On a subsequent request, if the
-     * fingerprint matches, the in-memory cache can be restored without scanning.
-     */
-    public bool $discoveryPersistList = false;
+    // Discovery tuning flags removed: discoveryPersistList, discoveryPreload, discoveryUseAPCu, discoveryFingerprintMtimeDepth.
+    // Behavior now derived automatically from leanMode + overrides (see enableDiscoverySnapshot, etc.).
 
     /**
-     * When true (and discoveryPersistList enabled), the template list is eagerly
-     * loaded from the persisted snapshot during diagnostics/list operations if
-     * no in-process cache exists and fingerprint matches.
+     * Lean Mode: master switch to minimize work and persisted artifacts.
+     * When true it disables by default:
+     *  - Warmup summary persistence
+     *  - Invalidation history
+     *  - Extended dynamic metrics (name listings)
+     *  - Extended diagnostics bundle
+     *  - (Discovery snapshot) unless forced via override.
+     * Individual (nullable) overrides may re-enable specific items without leaving Lean mode.
+     * If leanMode = false the "full" profile enables all features by default. Nullable overrides = null mean
+     * "use base profile".
      */
-    public bool $discoveryPreload = false;
+    public bool $leanMode = false;
 
     /**
-     * Use APCu (if extension loaded and enabled) to cache the discovered list
-     * across processes. Falls back gracefully to filesystem JSON snapshot.
+     * Force (true/false) discovery snapshot regardless of profile.
+     * null = base profile decision (lean? false : true)
      */
-    public bool $discoveryUseAPCu = false;
+    public ?bool $enableDiscoverySnapshot = null;
 
     /**
-     * Depth for directory mtime sampling in fingerprint calculation.
-     * 0 = only root template directories; 1 = include immediate subdirectories, etc.
-     * Higher values increase fingerprint accuracy at cost of extra stat() calls.
+     * Persist warmup summary. null = (lean? false : true)
      */
-    public int $discoveryFingerprintMtimeDepth = 0;
+    public ?bool $enableWarmupSummary = null;
 
     /**
-     * Backend used for Twig compiled template cache.
-     *  - 'file' (default): filesystem path in $cachePath (or default WRITEPATH/cache/twig)
-     *  - 'ci' : use the CodeIgniter cache service (redis, memcached, etc. as configured)
+     * Persist and expose invalidation history. null = (lean? false : true)
      */
-    public string $cacheBackend = 'file';
+    public ?bool $enableInvalidationHistory = null;
 
     /**
-     * Prefix for CI cache backend keys (only used when cacheBackend = 'ci').
-     * If null, the library will derive it from Config\Cache::$prefix concatenated with 'twig_'.
-     * Example: if Config\Cache::$prefix = 'app_', final prefix becomes 'app_twig_'.
+     * Dynamic metrics (counts + names) for functions/filters. If false minimal counts (or zero) are shown.
+     * null = (lean? false : true)
+     */
+    public ?bool $enableDynamicMetrics = null;
+
+    /**
+     * Extended diagnostics (static/dynamic name lists and non-essential details).
+     * null = (lean? false : true)
+     */
+    public ?bool $enableExtendedDiagnostics = null;
+
+    /**
+     * @deprecated Prefix is still applied when using CI cache but value is derived automatically from Config\Cache::$prefix.
+     * Custom overrides are discouraged and may be removed in a future major version.
      */
     public ?string $cachePrefix = null;
 
     /**
-     * TTL seconds for CI cache entries (0 = no expiry).
+     * @deprecated TTL is still honored if non-zero but auto mode typically uses no expiry (0). Will be simplified later.
      */
     public int $cacheTtl = 0;
+
+    /**
+     * Toolbar tuning: when many templates/functions or high traffic, the debug toolbar
+     * panel can add overhead (name collection, template listing, json encoding, etc.).
+     * These flags allow trimming what the collector does at runtime.
+     */
+    public bool $toolbarMinimal = false; // If true only core + cache + perf sections; skips discovery/warmup/invalidations/dynamics/template list/capabilities/persistence.
+
+    public bool $toolbarShowTemplates    = true; // Show templates table (can be heavy if many templates)
+    public int $toolbarMaxTemplates      = 50; // Hard cap for template rows
+    public bool $toolbarShowCapabilities = true; // Show capabilities panel
+    public bool $toolbarShowPersistence  = true; // Show persistence panel
 }

@@ -158,11 +158,28 @@ class Twig extends BaseCollector
         if (! method_exists($this->viewer, 'getDiagnostics')) {
             return '<div class="ci-twig-panel"><p>No diagnostics available.</p></div>';
         }
+        // Load config for toolbar tuning
+        $cfg = null;
+
+        try {
+            $cfg = config('Twig');
+        } catch (Throwable $e) {
+            $cfg = null;
+        }
+        $toolbarMinimal       = $cfg->toolbarMinimal ?? false;
+        $toolbarShowTemplates = ! $toolbarMinimal && ($cfg->toolbarShowTemplates ?? true);
+        $toolbarMaxTemplates  = isset($cfg->toolbarMaxTemplates) ? (int) $cfg->toolbarMaxTemplates : 50;
+        if ($toolbarMaxTemplates <= 0) {
+            $toolbarMaxTemplates = 25;
+        }
+        $toolbarShowCapabilities = ! $toolbarMinimal && ($cfg->toolbarShowCapabilities ?? true);
+        $toolbarShowPersistence  = ! $toolbarMinimal && ($cfg->toolbarShowPersistence ?? true);
+        // Deferred rendering eliminado: siempre renderiza el panel completo.
         // To ensure discovery hit/miss counts include the template listing (if shown),
         // we prefetch the template list (at most once) BEFORE capturing diagnostics.
         $templatesData      = null;
         $withStatusForPanel = true;
-        if (method_exists($this->viewer, 'listTemplates')) {
+        if ($toolbarShowTemplates && method_exists($this->viewer, 'listTemplates')) {
             try {
                 $templatesData = $this->viewer->listTemplates($withStatusForPanel);
             } catch (Throwable $e) {
@@ -180,22 +197,34 @@ class Twig extends BaseCollector
                 return '—';
             }
         };
-        $sections = [
+        $cap           = $diag['capabilities'] ?? [];
+        $showDiscovery = ! $toolbarMinimal && ! empty($cap['discoverySnapshot']);
+        $showWarmup    = ! $toolbarMinimal && ! empty($cap['warmupSummary']) && ! empty($diag['warmup']);
+        $showInvalid   = ! $toolbarMinimal && ! empty($cap['invalidationHistory']) && ! empty($diag['invalidations']);
+        $showDynamics  = ! $toolbarMinimal && (! empty($cap['dynamicMetrics']) || ! empty($cap['extendedDiagnostics']));
+        $sections      = [
             'Core' => [
                 'Renders'            => $diag['renders'] ?? 0,
                 'Last View'          => htmlspecialchars((string) ($diag['last_render_view'] ?? ''), ENT_QUOTES, 'UTF-8'),
                 'Environment Resets' => $diag['environment_resets'] ?? 0,
             ],
             'Cache' => [
-                'Enabled'            => ($diag['cache']['enabled'] ?? false) ? 'yes' : 'no',
-                'Path'               => htmlspecialchars((string) ($diag['cache']['path'] ?? ''), ENT_QUOTES, 'UTF-8'),
-                'Compiled Templates' => $diag['cache']['compiled_templates'] ?? 'n/a',
+                'Enabled'             => ($diag['cache']['enabled'] ?? false) ? 'yes' : 'no',
+                'Mode'                => $diag['cache']['mode'] ?? 'n/a',
+                'Service Class'       => $diag['cache']['service_class'] ?? 'n/a',
+                'Prefix'              => $diag['cache']['prefix'] ?? 'n/a',
+                'TTL'                 => $diag['cache']['ttl'] ?? 0,
+                'Path'                => htmlspecialchars((string) ($diag['cache']['path'] ?? ''), ENT_QUOTES, 'UTF-8'),
+                'Compiled Templates'  => $diag['cache']['compiled_templates'] ?? 'n/a',
+                'Reconstructed Index' => ! empty($diag['cache']['reconstructed_index']) ? 'yes' : 'no',
             ],
             'Performance' => [
                 'Total Render (ms)' => $diag['performance']['total_render_time_ms'] ?? 0,
                 'Avg Render (ms)'   => $diag['performance']['avg_render_time_ms'] ?? 0,
             ],
-            'Discovery' => (static function () use ($diag) {
+        ];
+        if ($showDiscovery) {
+            $sections['Discovery'] = (static function () use ($diag) {
                 $d           = $diag['discovery'] ?? [];
                 $fingerprint = $d['fingerprint'] ?? null;
                 if (is_string($fingerprint) && strlen($fingerprint) > 16) {
@@ -212,21 +241,49 @@ class Twig extends BaseCollector
                     'Cache Source'       => $d['cache_source'] ?? 'n/a',
                     'Fingerprint'        => $fingerprint ?? 'n/a',
                 ];
-            })(),
-            'Warmup' => [
+            })();
+        }
+        if ($showWarmup) {
+            $sections['Warmup'] = [
                 'Last Summary' => isset($diag['warmup']['summary']) ? $json($diag['warmup']['summary']) : '—',
                 'Last All'     => isset($diag['warmup']['all']) ? ($diag['warmup']['all'] ? 'yes' : 'no') : '—',
-            ],
-            'Invalidations' => [
+            ];
+        }
+        if ($showInvalid) {
+            $sections['Invalidations'] = [
                 'Last'               => isset($diag['invalidations']['last']) ? $json($diag['invalidations']['last']) : '—',
                 'Cumulative Removed' => $diag['invalidations']['cumulative_removed'] ?? 0,
-            ],
-            'Dynamics' => [
+            ];
+        }
+        if ($showDynamics) {
+            $sections['Dynamics'] = [
                 'Functions (static/dynamic/pending)' => ($diag['static_functions']['configured'] ?? 0) . '/' . ($diag['dynamic_functions']['active'] ?? 0) . '/' . ($diag['dynamic_functions']['pending'] ?? 0),
                 'Filters (static/dynamic/pending)'   => ($diag['static_filters']['configured'] ?? 0) . '/' . ($diag['dynamic_filters']['active'] ?? 0) . '/' . ($diag['dynamic_filters']['pending'] ?? 0),
                 'Extensions (configured/pending)'    => ($diag['extensions']['configured'] ?? 0) . '/' . ($diag['extensions']['pending'] ?? 0),
-            ],
-        ];
+            ];
+        }
+        // Capabilities panel
+        if ($toolbarShowCapabilities && ! empty($cap)) {
+            $capPairs = [];
+
+            foreach ($cap as $k => $v) {
+                $capPairs[$k] = $v ? 'on' : 'off';
+            }
+            $sections['Capabilities'] = $capPairs;
+        }
+        // Persistence mediums panel (always show compile_index for transparency)
+        if ($toolbarShowPersistence && ! empty($diag['persistence']) && is_array($diag['persistence'])) {
+            $pPairs = [];
+
+            foreach ((array) $diag['persistence'] as $k => $row) {
+                if (is_array($row) && isset($row['medium'])) {
+                    $pPairs[$k] = $row['medium'];
+                }
+            }
+            if ($pPairs) {
+                $sections['Persistence'] = $pPairs;
+            }
+        }
 
         foreach ($sections as $label => $pairs) {
             $html .= '<h4 style="margin:0.75rem 0 0.25rem;">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</h4>';
@@ -239,7 +296,7 @@ class Twig extends BaseCollector
                       . '</tr>';
             }
             $html .= '</table>';
-            if ($label === 'Dynamics' && isset($diag['names'])) {
+            if ($label === 'Dynamics' && isset($diag['names']) && $showDynamics) {
                 $n  = $diag['names'];
                 $mk = static function (string $title, array $items): string {
                     if (! $items) {
@@ -262,11 +319,11 @@ class Twig extends BaseCollector
             }
         }
         // Templates panel (similar idea to Symfony's) - show up to 50 entries to avoid overload
-        if ($templatesData !== null && ! empty($templatesData)) {
+        if ($toolbarShowTemplates && $templatesData !== null && ! empty($templatesData)) {
             $html .= '<h4 style="margin:0.75rem 0 0.25rem;">Templates</h4>';
             $html .= '<table style="width:100%;border-collapse:collapse;font-size:11px;">';
             $html .= '<tr><th style="text-align:left;padding:2px 4px;border:1px solid #ccc;background:#eee;">Name</th><th style="text-align:left;padding:2px 4px;border:1px solid #ccc;background:#eee;">Compiled</th></tr>';
-            $limit         = 50;
+            $limit         = $toolbarMaxTemplates;
             $count         = 0;
             $compiledTotal = 0;
             $total         = count($templatesData);

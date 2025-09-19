@@ -116,6 +116,23 @@ class Twig
     private ?array $lastInvalidation   = null; // ['type'=>string,'removed'=>int,'reinit'=>bool,'timestamp'=>float]
     private int $cumulativeInvalidated = 0;
 
+    /**
+     * Capability profile derivado de configuración (leanMode + overrides).
+     * Claves:
+     *  - discoverySnapshot
+     *  - warmupSummary
+     *  - invalidationHistory
+     *  - dynamicMetrics
+     *  - extendedDiagnostics
+     */
+    private array $capabilities = [
+        'discoverySnapshot'   => false,
+        'warmupSummary'       => true,
+        'invalidationHistory' => true,
+        'dynamicMetrics'      => true,
+        'extendedDiagnostics' => true,
+    ];
+
     // (No internal logger instance retained)
     /**
      * Cache manager for compiled templates & index
@@ -139,10 +156,11 @@ class Twig
     private TemplateDiscovery $discovery;
     private TemplateInvalidator $invalidator;
 
-    // Cache backend configuration (file or ci) and its parameters
-    private string $cacheBackend = 'file';
-    private ?string $cachePrefix = null; // resolved during initialize
-    private int $cacheTtl        = 0;
+    // Cache backend: always attempt service('cache'). If handler is File* treat as filesystem;
+    // otherwise wrap with CICacheAdapter. Legacy string backend replaced by boolean flag.
+    private bool $usingCacheService = false; // true when non-file cache handler in use
+    private ?string $cachePrefix    = null;  // resolved during initialize
+    private int $cacheTtl           = 0;
 
     public function __construct(?TwigConfig $config = null)
     {
@@ -157,8 +175,8 @@ class Twig
         }
         $this->discovery->setPersistPath($persistDir . DIRECTORY_SEPARATOR . 'discovery-stats.json');
         $this->initialize($config);
-        // After initialize we know backend config; if CI backend, switch discovery persistence medium
-        if (($this->cacheBackend ?? 'file') === 'ci') {
+        // After initialize decide discovery persistence medium (remote cache vs filesystem)
+        if ($this->usingCacheService) {
             try {
                 $ciCache = Services::cache();
                 if ($ciCache && method_exists($this->discovery, 'useCiCache')) {
@@ -204,15 +222,27 @@ class Twig
 
         // default Twig config (allow overriding cache path via config property)
         $cachePath = $config->cachePath ?? (WRITEPATH . 'cache' . DIRECTORY_SEPARATOR . 'twig');
-        // Cache will be replaced later with CI adapter if cacheBackend === 'ci'
+        // Cache may be replaced later with adapter if a non-file cache service is active
         $this->config = [
             'cache'            => $cachePath,
             'debug'            => $this->debug,
             'autoescape'       => 'html',
             'strict_variables' => $config->strictVariables ?? false,
         ];
-        // Store backend flags for later environment creation
-        $this->cacheBackend = $config->cacheBackend ?? 'file';
+
+        // Backend auto-detection: always try service('cache'). Non-file handler => remote cache service.
+        try {
+            $svc = Services::cache();
+            if ($svc) {
+                $handlerClass            = $svc::class;
+                $isFile                  = str_contains(strtolower($handlerClass), strtolower('File')); // heuristic for FileHandler
+                $this->usingCacheService = ! $isFile;
+            } else {
+                $this->usingCacheService = false;
+            }
+        } catch (Throwable $e) {
+            $this->usingCacheService = false;
+        }
         if (array_key_exists('cachePrefix', (array) $config) && $config->cachePrefix !== null) {
             $this->cachePrefix = $config->cachePrefix;
         } else {
@@ -235,15 +265,58 @@ class Twig
 
         // Configure discovery performance options (introduced advanced flags)
         if (method_exists($this->discovery, 'configure')) {
+            // Recompute capabilities; snapshot decision derived from lean/override only now.
+            $this->computeCapabilities($config);
+            $persistSnapshot = $this->capabilities['discoverySnapshot'];
+            // Auto strategy: preload & APCu usage enabled when snapshot persistence active (cheap heuristics)
+            $enablePreload = $persistSnapshot; // simplifies config surface
+            $useAPCu       = $persistSnapshot && (function_exists('apcu_enabled') ? apcu_enabled() : false);
+            $mtimeDepth    = $persistSnapshot ? 0 : 0; // depth currently fixed; retained parameter for API stability
             $this->discovery->configure(
-                $config->discoveryPersistList ?? false,
-                $config->discoveryPreload ?? false,
-                $config->discoveryUseAPCu ?? false,
-                $config->discoveryFingerprintMtimeDepth ?? 0,
+                $persistSnapshot,
+                $enablePreload,
+                $useAPCu,
+                $mtimeDepth,
             );
         }
 
         return $this;
+    }
+
+    /**
+     * Deriva capacidades finales combinando leanMode + overrides + flags legacy.
+     */
+    private function computeCapabilities(TwigConfig $config): void
+    {
+        $lean = $config->leanMode ?? false;
+        // Base profile según lean
+        if ($lean) {
+            $base = [
+                'discoverySnapshot'   => false,
+                'warmupSummary'       => false,
+                'invalidationHistory' => false,
+                'dynamicMetrics'      => false,
+                'extendedDiagnostics' => false,
+            ];
+        } else {
+            // In full profile snapshot persistence is now always enabled (was conditional before removal of flags).
+            $base = [
+                'discoverySnapshot'   => true,
+                'warmupSummary'       => true,
+                'invalidationHistory' => true,
+                'dynamicMetrics'      => true,
+                'extendedDiagnostics' => true,
+            ];
+        }
+        // Apply overrides (nullable)
+        $ov                 = static fn (?bool $override, bool $current): bool => $override === null ? $current : $override;
+        $this->capabilities = [
+            'discoverySnapshot'   => $ov($config->enableDiscoverySnapshot ?? null, $base['discoverySnapshot']),
+            'warmupSummary'       => $ov($config->enableWarmupSummary ?? null, $base['warmupSummary']),
+            'invalidationHistory' => $ov($config->enableInvalidationHistory ?? null, $base['invalidationHistory']),
+            'dynamicMetrics'      => $ov($config->enableDynamicMetrics ?? null, $base['dynamicMetrics']),
+            'extendedDiagnostics' => $ov($config->enableExtendedDiagnostics ?? null, $base['extendedDiagnostics']),
+        ];
     }
 
     public function resetTwig(): void
@@ -407,8 +480,8 @@ class Twig
                 }
             }
         }
-        // Swap cache option with CI cache adapter if configured.
-        if (($this->cacheBackend ?? 'file') === 'ci') {
+        // Swap cache option with adapter when using non-file cache service.
+        if ($this->usingCacheService) {
             try {
                 $ciCache = Services::cache();
                 if ($ciCache) {
@@ -649,8 +722,8 @@ class Twig
     public function getCachePath(): string
     {
         $this->createTwig();
-        if (($this->cacheBackend ?? 'file') === 'ci') {
-            return ''; // no filesystem path for CI cache backend
+        if ($this->usingCacheService) {
+            return ''; // no filesystem path when using remote cache service
         }
         $cache = $this->config['cache'] ?? '';
         if (is_string($cache) && $cache !== '' && ! is_dir($cache)) {
@@ -667,7 +740,7 @@ class Twig
      */
     public function clearCache(bool $reinitialize = false): int
     {
-        if (($this->cacheBackend ?? 'file') === 'ci') {
+        if ($this->usingCacheService) {
             $this->createTwig();
             $removed = 0; // we cannot count precisely without scanning index again; adapter handles clear
 
@@ -1021,7 +1094,7 @@ class Twig
 
     public function isCacheEnabled(): bool
     {
-        return (($this->cacheBackend ?? 'file') === 'ci') || ! empty($this->config['cache']);
+        return $this->usingCacheService || ! empty($this->config['cache']);
     }
 
     /** Set autoescape strategy for a namespace (namespace without leading @). */
@@ -1132,13 +1205,17 @@ class Twig
      */
     public function getCompileIndexPath(): string
     {
+        if ($this->usingCacheService) {
+            return '';
+        }
+
         return rtrim($this->getCachePath(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'compile-index.json';
     }
 
     private function loadCompileIndex(): void
     {
         static $loadedByPath = [];
-        if (($this->cacheBackend ?? 'file') === 'ci') {
+        if ($this->usingCacheService) {
             $key = ($this->cachePrefix ?? 'twig_') . 'compile.index';
             if (isset($loadedByPath[$key])) {
                 return;
@@ -1178,9 +1255,71 @@ class Twig
         $loadedByPath[$path] = true;
     }
 
+    /**
+     * Heuristic fallback: if the compile index is empty but cache directory contains compiled Twig
+     * PHP classes (common after upgrade or manual cache copy), we reconstruct a synthetic index so
+     * diagnostics show a realistic compiled_templates count. We cannot map back to logical template
+     * names without embedded metadata, so we generate placeholder logical IDs (unknown_N). This only
+     * runs once per request and only when count=0.
+     */
+    private function rebuildCompileIndexIfEmpty(): void
+    {
+        if ($this->usingCacheService) {
+            // CI backend already persisted index as JSON; skip heuristic.
+            return;
+        }
+        $indexPath = $this->getCompileIndexPath();
+        if ($indexPath === '') {
+            return;
+        }
+        // If we already have entries, nothing to do.
+        if (count($this->cacheManager->getCompiledTemplates()) > 0) {
+            return;
+        }
+        $cacheDir = $this->getCachePath();
+        if ($cacheDir === '' || ! is_dir($cacheDir)) {
+            return;
+        }
+        $compiledFiles = [];
+
+        try {
+            $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($cacheDir, FilesystemIterator::SKIP_DOTS));
+
+            /** @var SplFileInfo $fi */
+            foreach ($it as $fi) {
+                if (! $fi->isFile()) {
+                    continue;
+                }
+                // Quick reject: only PHP files
+                if (substr($fi->getFilename(), -4) !== '.php') {
+                    continue;
+                }
+                // Cheap content scan (first 2KB) for Twig template class marker
+                $chunk = @file_get_contents($fi->getPathname(), false, null, 0, 2048);
+                if (is_string($chunk) && str_contains($chunk, 'class __TwigTemplate_')) {
+                    $compiledFiles[] = $fi->getPathname();
+                }
+            }
+        } catch (Throwable $e) { // ignore scan errors
+        }
+        if ($compiledFiles === []) {
+            return; // nothing to rebuild
+        }
+        // Seed synthetic logical names
+        $i = 1;
+
+        foreach ($compiledFiles as $_) {
+            $this->cacheManager->markCompiled('unknown_' . $i++);
+        }
+        // Persist synthetic index (best-effort)
+        $this->saveCompileIndex();
+        // Annotate that we reconstructed so UI/diagnostics can clarify
+        $this->reconstructedIndex = true; // dynamic property; minimal impact
+    }
+
     private function saveCompileIndex(): void
     {
-        if (($this->cacheBackend ?? 'file') === 'ci') {
+        if ($this->usingCacheService) {
             try {
                 $cache = Services::cache();
                 if ($cache) {
@@ -1300,9 +1439,11 @@ class Twig
     {
         $this->createTwig();
         $cacheDir = $this->getCachePath();
-        $result   = $this->invalidator->invalidateMany($logicalNames, $cacheDir, $reinitialize, fn () => $this->resetTwig(), static function ($level, $msg) { if (function_exists('log_message')) {
-            log_message($level, $msg);
-        } });
+        $result   = $this->invalidator->invalidateMany($logicalNames, $cacheDir, $reinitialize, fn () => $this->resetTwig(), static function ($level, $msg) {
+            if (function_exists('log_message')) {
+                log_message($level, $msg);
+            }
+        });
         if ($result['removed'] > 0) {
             $this->saveCompileIndex();
         }
@@ -1326,9 +1467,11 @@ class Twig
             return ['removed' => 0, 'templates' => [], 'reinit' => false];
         }
         $cacheDir = $this->getCachePath();
-        $result   = $this->invalidator->invalidateNamespace($namespace, $cacheDir, $reinitialize, $this->loader, fn () => $this->resetTwig(), static function ($level, $msg) { if (function_exists('log_message')) {
-            log_message($level, $msg);
-        } });
+        $result   = $this->invalidator->invalidateNamespace($namespace, $cacheDir, $reinitialize, $this->loader, fn () => $this->resetTwig(), static function ($level, $msg) {
+            if (function_exists('log_message')) {
+                log_message($level, $msg);
+            }
+        });
         if ($result['removed'] > 0) {
             $this->saveCompileIndex();
         }
@@ -1354,6 +1497,7 @@ class Twig
         if (method_exists($this, 'loadCompileIndex')) {
             try {
                 $this->loadCompileIndex();
+                $this->rebuildCompileIndexIfEmpty();
             } catch (Throwable $e) { // ignore
             }
         }
@@ -1397,58 +1541,91 @@ class Twig
             $lastView = $lastRow['view'] ?? null;
         }
 
-        return [
+        // Base always-present sections
+        $serviceClass = null;
+        if ($this->usingCacheService) {
+            try {
+                $c            = Services::cache();
+                $serviceClass = $c ? $c::class : null;
+            } catch (Throwable $e) {
+                $serviceClass = null;
+            }
+        }
+        $diag = [
             'renders'            => $this->renderCount,
             'last_render_view'   => $lastView,
             'environment_resets' => $this->environmentResets,
-            'dynamic_functions'  => $fnCounts,
-            'dynamic_filters'    => $filterCounts,
-            'static_functions'   => ['configured' => $staticFnConfigured],
-            'static_filters'     => ['configured' => $staticFilterConfigured],
-            'names'              => [
-                'static_functions'  => $truncateList($staticFunctionNames),
-                'dynamic_functions' => $truncateList($dynamicFunctionNames),
-                'static_filters'    => $truncateList($staticFilterNames),
-                'dynamic_filters'   => $truncateList($dynamicFilterNames),
-            ],
-            'extensions' => [
-                'configured' => count($this->extensions),
-                'pending'    => count($this->pendingExtensions),
-            ],
-            'cache' => [
-                'enabled' => $this->isCacheEnabled(),
-                'path'    => $this->isCacheEnabled() ? $this->getCachePath() : null,
-                'backend' => ($this->cacheBackend ?? 'file') === 'ci'
-                    ? 'ci:' . (static function () {
-                        try {
-                            $c = Services::cache();
-
-                            return $c ? $c::class : 'unknown';
-                        } catch (Throwable $e) {
-                            return 'unknown';
-                        }
-                    })()
-                    : 'file',
-                'compiled_templates' => $compiledTemplatesCount,
-            ],
-            'warmup'        => $this->lastWarmup,
-            'invalidations' => [
-                'last'               => $this->lastInvalidation,
-                'cumulative_removed' => $this->cumulativeInvalidated,
-            ],
-            'discovery' => $discoveryStats + [
-                'persistence_medium' => method_exists($this->discovery, 'getPersistenceMedium') ? $this->discovery->getPersistenceMedium() : 'file',
-            ],
-            'persistence' => [
-                'warmup'        => ['medium' => ($this->cacheBackend ?? 'file') === 'ci' ? 'ci' : 'file'],
-                'compile_index' => ['medium' => ($this->cacheBackend ?? 'file') === 'ci' ? 'ci' : 'file'],
-                'invalidations' => ['medium' => ($this->cacheBackend ?? 'file') === 'ci' ? 'ci' : 'file'],
+            'cache'              => [
+                'enabled'             => $this->isCacheEnabled(),
+                'path'                => $this->isCacheEnabled() ? $this->getCachePath() : null,
+                'mode'                => $this->usingCacheService ? 'service' : 'filesystem',
+                'service_class'       => $serviceClass,
+                'prefix'              => $this->cachePrefix,
+                'ttl'                 => $this->cacheTtl,
+                'compiled_templates'  => $compiledTemplatesCount,
+                'reconstructed_index' => property_exists($this, 'reconstructedIndex') ? true : false,
             ],
             'performance' => [
                 'total_render_time_ms' => round($this->totalRenderTime * 1000, 2),
                 'avg_render_time_ms'   => round($avgRender * 1000, 2),
             ],
+            'capabilities' => $this->capabilities,
         ];
+
+        // Only include extended sections if capability enabled to keep lean truly minimal.
+        if ($this->capabilities['dynamicMetrics']) {
+            $diag['dynamic_functions'] = $fnCounts;
+            $diag['dynamic_filters']   = $filterCounts;
+        }
+
+        // Static counts useful for debugging, keep only if extendedDiagnostics enabled to reduce size.
+        if ($this->capabilities['extendedDiagnostics']) {
+            $diag['static_functions'] = ['configured' => $staticFnConfigured];
+            $diag['static_filters']   = ['configured' => $staticFilterConfigured];
+            $diag['extensions']       = [
+                'configured' => count($this->extensions),
+                'pending'    => count($this->pendingExtensions),
+            ];
+        }
+
+        if ($this->capabilities['extendedDiagnostics']) {
+            $diag['names'] = [
+                'static_functions'  => $truncateList($staticFunctionNames),
+                'dynamic_functions' => $truncateList($dynamicFunctionNames),
+                'static_filters'    => $truncateList($staticFilterNames),
+                'dynamic_filters'   => $truncateList($dynamicFilterNames),
+            ];
+        }
+
+        if ($this->capabilities['warmupSummary']) {
+            $diag['warmup'] = $this->lastWarmup;
+        }
+        if ($this->capabilities['invalidationHistory']) {
+            $diag['invalidations'] = [
+                'last'               => $this->lastInvalidation,
+                'cumulative_removed' => $this->cumulativeInvalidated,
+            ];
+        }
+        if ($this->capabilities['discoverySnapshot']) {
+            $diag['discovery'] = $discoveryStats + [
+                'persistence_medium' => method_exists($this->discovery, 'getPersistenceMedium') ? $this->discovery->getPersistenceMedium() : 'file',
+            ];
+        }
+        // Persistence mediums only relevant if any persistence features are on; always show compile_index medium for transparency.
+        $diag['persistence'] = [
+            'compile_index' => ['medium' => $this->usingCacheService ? 'ci' : 'file'],
+        ];
+        if ($this->capabilities['discoverySnapshot']) {
+            $diag['persistence']['discovery_snapshot'] = ['medium' => method_exists($this->discovery, 'getPersistenceMedium') ? $this->discovery->getPersistenceMedium() : ($this->usingCacheService ? 'ci' : 'file')];
+        }
+        if ($this->capabilities['warmupSummary']) {
+            $diag['persistence']['warmup'] = ['medium' => $this->usingCacheService ? 'ci' : 'file'];
+        }
+        if ($this->capabilities['invalidationHistory']) {
+            $diag['persistence']['invalidations'] = ['medium' => $this->usingCacheService ? 'ci' : 'file'];
+        }
+
+        return $diag;
     }
 
     /**
@@ -1472,12 +1649,15 @@ class Twig
      */
     private function saveInvalidationsState(): void
     {
+        if (! $this->capabilities['invalidationHistory']) {
+            return;
+        }
         $payload = [
             'last'       => $this->lastInvalidation,
             'cumulative' => $this->cumulativeInvalidated,
             'version'    => 1,
         ];
-        if (($this->cacheBackend ?? 'file') === 'ci') {
+        if ($this->usingCacheService) {
             try {
                 $cache = Services::cache();
                 if ($cache) {
@@ -1504,7 +1684,10 @@ class Twig
      */
     private function loadInvalidationsState(): void
     {
-        if (($this->cacheBackend ?? 'file') === 'ci') {
+        if (! $this->capabilities['invalidationHistory']) {
+            return;
+        }
+        if ($this->usingCacheService) {
             try {
                 $cache = Services::cache();
                 if ($cache) {
@@ -1554,8 +1737,11 @@ class Twig
         if ($this->lastWarmup === null) {
             return;
         }
+        if (! $this->capabilities['warmupSummary']) {
+            return;
+        }
         $payload = $this->lastWarmup + ['version' => 1];
-        if (($this->cacheBackend ?? 'file') === 'ci') {
+        if ($this->usingCacheService) {
             try {
                 $cache = Services::cache();
                 if ($cache) {
@@ -1579,7 +1765,10 @@ class Twig
      */
     private function loadWarmupSummary(): void
     {
-        if (($this->cacheBackend ?? 'file') === 'ci') {
+        if (! $this->capabilities['warmupSummary']) {
+            return;
+        }
+        if ($this->usingCacheService) {
             try {
                 $cache = Services::cache();
                 if ($cache) {

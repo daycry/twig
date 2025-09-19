@@ -45,29 +45,26 @@ When to use `--force` / `true` force flag:
 
 ---
 ## 3. Discovery Optimization
-The discovery phase enumerates logical template names. It can be the largest cold-start latency source for applications with hundreds of templates.
+The discovery phase enumerates logical template names and can dominate cold-start latency for large template sets.
 
-Key Config Flags (`Config\\Twig`):
-```php
-$discoveryPersistList = true;      // Write snapshot JSON / CI entry
-$discoveryPreload     = true;      // Restore snapshot on process start
-$discoveryUseAPCu     = true;      // Share list across PHP-FPM workers
-$discoveryFingerprintMtimeDepth = 0; // Raise to 1–2 if deep structural changes
-```
+Simplified Model (no per-flag tuning):
+| Profile | Snapshot | Preload | APCu | Notes |
+|---------|----------|---------|------|-------|
+| Full (`leanMode = false`) | Enabled | Enabled | Enabled if extension active | Fast path; zero manual tuning |
+| Lean (`leanMode = true`) | Disabled | Disabled | Disabled | Lowest overhead |
+| Lean + Override (`leanMode = true`, `enableDiscoverySnapshot = true`) | Enabled | Enabled | Enabled if extension active | Targeted acceleration with minimal diagnostics |
 
-Lifecycle:
-1. First scan → miss, build snapshot & fingerprint.
-2. Next process (preload on) → fingerprint verify, promote to hit without scan.
-3. On directory structure change (mtime difference) → fingerprint mismatch → new scan + snapshot.
+Lifecycle (with snapshot active):
+1. First scan → miss; build snapshot + fingerprint.
+2. Subsequent process → fingerprint verify, restore list (hit) without scanning.
+3. Structural change (fingerprint mismatch) → rescan, refresh snapshot.
 
-APCu provides near O(1) restore: hash lookup + array fetch.
-
-Symptoms & Fixes:
-| Symptom | Likely Cause | Fix |
-|---------|--------------|-----|
-| Hits never increase | Snapshot disabled or fingerprint always changing | Enable persist/preload; reduce depth to 0 |
-| Frequent rescans post edit | Depth too high for frequent file operations | Lower depth |
-| Templates missing from list | Paths misconfigured | Check `Config\\Twig::$paths` |
+Symptoms & Guidance:
+| Symptom | Likely Cause | Recommendation |
+|---------|--------------|----------------|
+| Hits never increase | Always lean without override | Enable snapshot via override or disable lean |
+| Frequent rescans | Underlying template directories changing legitimately | Accept cost or keep lean if acceptable |
+| High initial latency only | No warmup, cold snapshot build | Run warmup or keep full profile |
 
 ---
 ## 4. Dynamic Registry Impact
@@ -134,12 +131,14 @@ All persistence writes are best-effort; runtime failures degrade to a safe but s
 
 ---
 ## 9. Recommended Production Bundle
+Full profile (default): no explicit discovery settings needed.
 ```php
-$config->cacheBackend                   = 'ci';
-$config->discoveryPersistList           = true;
-$config->discoveryPreload               = true;
-$config->discoveryUseAPCu               = true;   // if server supports
-$config->discoveryFingerprintMtimeDepth = 0;      // bump to 1 only if missed changes
+$config->leanMode = false; // auto snapshot + preload + APCu (if available)
+```
+Lightweight with snapshot:
+```php
+$config->leanMode = true;
+$config->enableDiscoverySnapshot = true; // only acceleration you need
 ```
 Deployment Hook:
 ```
@@ -174,3 +173,43 @@ php spark twig:warmup --all
 
 ---
 Happy profiling!
+
+---
+## 13. Lean Mode Performance Profile
+
+Lean Mode (`$config->leanMode = true`) offers a low-overhead operational profile by disabling non-essential persistence & diagnostic work:
+
+Disabled by default under Lean:
+1. Warmup summary persistence
+2. Invalidation history persistence
+3. Discovery snapshot (unless re-enabled via override)
+4. Dynamic metrics (names & counts) beyond core rendering stats
+5. Extended diagnostics name lists
+
+Re-enable selectively with nullable overrides (set to `true`):
+```php
+$config->leanMode = true;
+$config->enableDiscoverySnapshot   = true; // keep snapshot for large template trees
+$config->enableWarmupSummary       = true; // capture last warmup result
+$config->enableInvalidationHistory = true; // track churn
+```
+
+### 13.1 Cost Comparison (Qualitative)
+| Component | Full Profile Cost | Lean Default Cost |
+|-----------|-------------------|-------------------|
+| Warmup summary write | Single JSON write per warmup | Skipped |
+| Invalidation state write | JSON write per invalidation event | Skipped |
+| Discovery snapshot read (preload) | JSON + fingerprint verify | Skipped unless override enabled |
+| Dynamic metrics collection | Array merges + name gathering | Minimal (zeroed counts) |
+| Names list memory | O(F + filters + functions) | Eliminated |
+
+### 13.2 When to Use Lean Mode
+| Condition | Lean Mode? |
+|-----------|------------|
+| High traffic & low need for rich diagnostics | Yes |
+| Frequent template invalidations requiring audit | No (keep history) |
+| Memory constrained FPM workers | Yes |
+| Debug session / profiling | No |
+
+See `docs/CACHING.md#21-lean-mode--capability-overrides` for detailed capability matrix.
+

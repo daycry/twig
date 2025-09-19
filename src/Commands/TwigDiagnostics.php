@@ -57,6 +57,8 @@ class TwigDiagnostics extends BaseCommand
             }
         }
         if (isset($diag['warmup'])) {
+        }
+        if (! empty($diag['warmup'])) {
             $print('Warmup Summary', isset($diag['warmup']['summary']) ? json_encode($diag['warmup']['summary']) : '-');
             $print('Warmup All', isset($diag['warmup']['all']) ? ($diag['warmup']['all'] ? 'yes' : 'no') : '-');
         }
@@ -73,6 +75,8 @@ class TwigDiagnostics extends BaseCommand
             }
         }
         if (isset($diag['invalidations'])) {
+        }
+        if (! empty($diag['invalidations'])) {
             $print('Last Invalidation', $diag['invalidations']['last'] ?? '-');
             $print('Cumulative Invalidated', $diag['invalidations']['cumulative_removed'] ?? 0);
         }

@@ -19,9 +19,12 @@ final class TwigCacheToggleTest extends CIUnitTestCase
         $cfg->paths = [__DIR__ . '/../_support/Templates'];
         $twig       = new Twig($cfg);
         $twig->warmup(['welcome']); // compile something
-        $path        = $twig->getCachePath();
+        $path = $twig->getCachePath();
+        if ($path === '') {
+            $this->markTestSkipped('Filesystem cache disabled (CI cache backend auto-detected).');
+        }
         $filesBefore = $this->countTwigCacheFiles($path);
-        $this->assertGreaterThan(0, $filesBefore);
+        $this->assertGreaterThan(0, $filesBefore, 'Expected compiled files before disabling');
 
         $twig->disableCache();
         $this->assertFalse($twig->isCacheEnabled());

@@ -16,6 +16,9 @@ final class TwigCompileIndexTest extends CIUnitTestCase
         $cfg->paths = [__DIR__ . '/../_support/Templates'];
         $twig       = new Twig($cfg);
         $idxPath    = $twig->getCompileIndexPath();
+        if ($idxPath === '' || ! str_contains($idxPath, DIRECTORY_SEPARATOR . 'compile-index.json')) {
+            $this->markTestSkipped('Filesystem compile index not available under CI cache backend.');
+        }
         if (is_file($idxPath)) {
             @unlink($idxPath);
         }

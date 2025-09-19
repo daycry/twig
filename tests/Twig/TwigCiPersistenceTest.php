@@ -11,12 +11,12 @@ final class TwigCiPersistenceTest extends CIUnitTestCase
 {
     private function newTwig(string $prefix): Twig
     {
-        $config                       = new TwigConfig();
-        $config->paths                = ['./tests/_support/Templates/'];
-        $config->cacheBackend         = 'ci';
-        $config->cachePrefix          = $prefix;
-        $config->cacheTtl             = 0;
-        $config->discoveryPersistList = true;
+        $config              = new TwigConfig();
+        $config->paths       = ['./tests/_support/Templates/'];
+        $config->cachePrefix = $prefix;
+        $config->cacheTtl    = 0;
+        // Discovery snapshot now enabled by default in full profile; explicit override for clarity
+        $config->enableDiscoverySnapshot = true;
 
         return new Twig($config);
     }

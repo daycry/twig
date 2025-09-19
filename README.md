@@ -38,6 +38,117 @@ Upgrade Notes:
 * Log format changed; adjust any monitoring tools expecting old message text.
 * Version bumped to v3 to reflect the internal restructuring & new operational capabilities rather than surface API breaks.
 
+### Current Behavior
+Discovery snapshot, preload and APCu acceleration are automatic in the default profile (`leanMode = false`). In Lean Mode they are disabled unless explicitly re-enabled with `enableDiscoverySnapshot`.
+
+### v3.x Runtime Capability Model
+
+Runtime features are governed by a profile (Full vs Lean) plus nullable overrides:
+
+| Capability | Full (leanMode = false) | Lean (leanMode = true) | Override `null` | Override `true` | Override `false` |
+|------------|-------------------------|-------------------------|-----------------|-----------------|------------------|
+| Discovery Snapshot (persist + preload + APCu) | ON | OFF | Inherit profile | Force ON | Force OFF |
+| Warmup Summary Persistence | ON | OFF | Inherit profile | Force ON | Force OFF |
+| Invalidation History (last + cumulative) | ON | OFF | Inherit profile | Force ON | Force OFF |
+| Dynamic Metrics (function/filter counts) | ON | OFF | Inherit profile | Force ON | Force OFF |
+| Extended Diagnostics (names lists, static counts) | ON | OFF | Inherit profile | Force ON | Force OFF |
+
+`null` significa “hereda el perfil base”. Establecer explícitamente `true` / `false` domina siempre al modo (Full / Lean).
+
+### Automatic Cache Backend Detection
+
+El sistema siempre invoca `service('cache')`:
+* Si el handler es FileHandler (clase contiene `File`) => modo `filesystem` usando la ruta `cachePath` (por defecto `WRITEPATH/cache/twig`).
+* Cualquier otro handler => modo `service` (se envuelve en `CICacheAdapter` para compilados Twig e índices).
+
+Diagnóstico (`getDiagnostics()['cache']`):
+```jsonc
+{
+    "enabled": true,
+    "path": "/var/www/app/writable/cache/twig",   // null cuando mode=service
+    "mode": "filesystem" | "service",
+    "service_class": "CodeIgniter\\Cache\\Handlers\\RedisHandler", // sólo en service
+    "prefix": "twig_",    // derivado de Config\Cache::$prefix + 'twig_'
+    "ttl": 0,              // 0 = sin expiración (habitual para compilados)
+    "compiled_templates": 42,
+    "reconstructed_index": false
+}
+```
+
+### Persistence Medium Map (`diagnostics['persistence']`)
+Claves posibles: `compile_index`, `discovery_snapshot`, `warmup`, `invalidations`.
+
+Valor: `{ "medium": "file" | "ci" }` donde `ci` representa uso de cache service (cualquier handler no-file). Ejemplo:
+```json
+"persistence": {
+    "compile_index": { "medium": "ci" },
+    "discovery_snapshot": { "medium": "ci" },
+    "warmup": { "medium": "ci" },
+    "invalidations": { "medium": "ci" }
+}
+```
+
+### Reconstructed Index
+Si tras leer el índice (`compile-index.json` o clave remota) la lista está vacía pero se detectan ficheros PHP compilados (upgrade / copia manual), se crea un índice sintético con nombres `unknown_N`. Campo `reconstructed_index = true` advierte de esta situación; haz un warmup para regenerar un índice “real”.
+
+### Lean vs Full Diagnostics Output
+Lean elimina secciones completas (no aparecen las claves) para minimizar payload. Ejemplo (lean + sin overrides) sólo contiene: `renders`, `last_render_view`, `environment_resets`, `cache`, `performance`, `capabilities`, `persistence` (y discovery si forzado). Cualquier override `true` reintroduce su sección concreta.
+
+### Debug Toolbar Tuning
+
+Para instalaciones grandes o páginas con mucho JavaScript, el panel de Twig puede añadir latencia si renderiza todas las secciones (discovery, dynamics, templates) en cada request. Se proveen flags para reducir el trabajo de renderizado directamente (no existe ya modo diferido / fetch asincrónico; fue retirado por simplicidad y evitar recursiones de rutas).
+
+Flags de configuración (en `Config\\Twig`):
+
+| Flag | Default | Efecto |
+|------|---------|--------|
+| `toolbarMinimal` | false | Si `true` sólo Core + Cache + Performance; omite Discovery, Warmup, Invalidations, Dynamics, Templates, Capabilities, Persistence. |
+| `toolbarShowTemplates` | true | Muestra/oculta la tabla de plantillas. Ignorado si `toolbarMinimal=true`. |
+| `toolbarMaxTemplates` | 50 | Límite de filas en la tabla de plantillas. |
+| `toolbarShowCapabilities` | true | Muestra sección de capabilities. Ignorado si minimal. |
+| `toolbarShowPersistence` | true | Muestra mediums de persistencia. Ignorado si minimal. |
+
+Ejemplo para máximo rendimiento en desarrollo (vista muy ligera):
+```php
+$config->toolbarMinimal = true; // Sólo métricas esenciales
+```
+
+Perfil intermedio sin tabla de plantillas pero con capabilities y persistence:
+```php
+$config->toolbarMinimal = false;
+$config->toolbarShowTemplates = false;
+```
+
+Estrategia sugerida:
+1. Empieza con `toolbarMinimal=true` si sólo depuras conteos y cache.
+2. Añade secciones puntualmente: desactiva minimal y activa sólo lo que necesitas (`toolbarShowTemplates=false` para omitir la tabla, reduce `toolbarMaxTemplates`).
+3. Usa Lean Mode para reducir también el tamaño de la estructura JSON interna si consumes diagnostics externamente.
+
+Notas:
+- Todas las secciones se renderizan inline; no hay peticiones secundarias.
+- Sin dependencias de JavaScript para cargar contenido dinámico del panel.
+- Las optimizaciones se centran en no construir HTML innecesario.
+
+
+### Ejemplos Rápidos
+Forzar snapshot en Lean:
+```php
+$config->leanMode = true;
+$config->enableDiscoverySnapshot = true; // sólo snapshot; warmupSummary, invalidations, metrics siguen OFF
+```
+
+Listar plantillas con estado de compilación:
+```php
+$twig->listTemplates(true); // [['name'=>'welcome','compiled'=>true], ...]
+```
+
+Warmup y ver resumen:
+```php
+$twig->warmup(['welcome']);
+print_r($twig->getDiagnostics()['warmup']);
+```
+
+
 
 ## Installation via composer
 
@@ -54,6 +165,28 @@ Run command:
 
 This command will copy a config file to your app namespace.
 Then you can adjust it to your needs. By default file will be present in `app/Config/Twig.php`.
+
+### Configuration Quick Start
+```php
+$config = new \Daycry\Twig\Config\Twig();
+
+// Optional: enable strict variables (throw on undefined)
+$config->strictVariables = true;
+
+// Optional: Lean Mode (disable non-essential persistence & diagnostics)
+$config->leanMode = true;                      // minimal overhead
+$config->enableDiscoverySnapshot = true;       // re-enable snapshot in lean if you have many templates
+
+// Custom template paths (optionally with namespace)
+$config->paths = [APPPATH.'Module/Views', [APPPATH.'Admin/Views','admin']];
+
+// Create instance
+$twig = new \Daycry\Twig\Twig($config);
+```
+
+Profiles Summary:
+- Full (default): snapshot + preload + APCu (if available) + all diagnostics.
+- Lean: minimal persistence; selectively re-add capabilities via nullable overrides.
 
 
 ## Usage Loading Library
@@ -144,26 +277,15 @@ Toolbar.php file
 ### Caching & Persistence Overview
 
 This integration implements a multi-layer caching architecture covering:
-1. Compiled template classes (filesystem or CI cache backend)
+1. Compiled template classes (auto-detected backend: CI cache service if available, otherwise filesystem)
 2. Compile index (logical template -> compiled flag)
 3. Template discovery stats + optional snapshot (with fingerprint & APCu acceleration)
 4. Warmup summary persistence
 5. Invalidation state (last + cumulative)
 
-You can switch the compiled template backend to Redis/Memcached/etc. via:
-```php
-$config->cacheBackend = 'ci';      // default 'file'
-$config->cachePrefix  = null;      // derive from Config\Cache::$prefix + 'twig_'
-$config->cacheTtl     = 0;         // no expiry
-```
+Backend selection is automatic (CI cache service if available, otherwise filesystem). Prefix derives from global cache config; TTL normally unlimited.
 
-Discovery performance tuning:
-```php
-$config->discoveryPersistList           = true; // persist list snapshot
-$config->discoveryPreload               = true; // preload snapshot each request
-$config->discoveryUseAPCu               = true; // APCu cross-process reuse
-$config->discoveryFingerprintMtimeDepth = 0;    // dir mtime depth
-```
+Discovery snapshot, preload and APCu acceleration are now automatic in the full profile (leanMode = false). Use `enableDiscoverySnapshot` when in Lean Mode to opt back in.
 
 Warm all templates once after deployment:
 ```
@@ -180,6 +302,22 @@ See full details, key layout, and troubleshooting in `docs/CACHING.md`.
 ### Further Reading
 - `docs/SERVICES.md` – Modular internal services (Discovery, CacheManager, DynamicRegistry, Invalidator)
 - `docs/PERFORMANCE.md` – Warmup strategy, discovery tuning, invalidation efficiency, diagnostics interpretation
+
+### Lean Mode (Low-Overhead Profile)
+
+Enable Lean Mode to minimize persistence & diagnostic overhead:
+```php
+$config->leanMode = true; // disables warmup summary, invalidation history, discovery snapshot, dynamic & extended diagnostics
+```
+Re-enable selected capabilities while staying in Lean:
+```php
+$config->leanMode = true;
+$config->enableDiscoverySnapshot = true;   // keep snapshot for faster discovery
+$config->enableWarmupSummary = true;       // record last warmup result
+```
+If `leanMode = false` (default) all capabilities are active automatically (snapshot always on now).
+
+See `docs/CACHING.md` (section "Lean Mode & Capability Overrides") and `docs/PERFORMANCE.md` for rationale & cost matrix.
 
 ### Custom Loader Injection
 
@@ -216,7 +354,7 @@ Supports:
 2. Array options mirroring native Twig options (`is_safe`, `needs_environment`, `needs_context`, etc.).
 
 ```php
-// Boolean (legacy style)
+// Boolean shorthand
 $twig->registerFunction('hello_fn', fn(string $n) => 'Hello ' . $n);             // escaped by default
 $twig->registerFunction('raw_html', fn() => '<b>Bold</b>', true);                // mark as safe HTML
 
@@ -443,7 +581,7 @@ Summary of notable enhancements (proposed release 0.3.0):
 - Listing & status: `listTemplates()` (with namespace/pattern filtering & compiled status)
 - Namespace auto-escape strategy mapping: `setAutoescapeForNamespace()`, `removeAutoescapeForNamespace()`
 - New CLI commands: `twig:invalidate`, `twig:invalidate:batch`, `twig:warmup`, `twig:list`, `twig:stats`, `twig:clear-cache`, `twig:publish`
-- Unified structured logging (key=value) replacing legacy formats
+-- Unified structured logging (key=value)
 - In-process discovery cache for logical template enumeration
 
 ## Roadmap / Ideas
