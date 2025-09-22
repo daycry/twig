@@ -243,20 +243,7 @@ class Twig
         } catch (Throwable $e) {
             $this->usingCacheService = false;
         }
-        if (array_key_exists('cachePrefix', (array) $config) && $config->cachePrefix !== null) {
-            $this->cachePrefix = $config->cachePrefix;
-        } else {
-            $globalPrefix = '';
-
-            try {
-                $cacheCfg = config('Cache');
-                if ($cacheCfg && property_exists($cacheCfg, 'prefix') && is_string($cacheCfg->prefix)) {
-                    $globalPrefix = $cacheCfg->prefix;
-                }
-            } catch (Throwable $e) { // ignore
-            }
-            $this->cachePrefix = $globalPrefix . 'twig_';
-        }
+        $this->cachePrefix = $this->deriveCachePrefix();
         $this->cacheTtl = $config->cacheTtl ?? 0;
 
         if (isset($config->saveData)) {
@@ -281,6 +268,31 @@ class Twig
         }
 
         return $this;
+    }
+
+    /**
+     * Derive final cache prefix.
+     * New simplified rule (requested):
+     *  - If global Config\Cache::$prefix ends with '_' (after trimming whitespace) => return '_twig_'
+     *  - Otherwise => return 'twig_'
+     * Rationale: avoid incorporating variable project prefixes to prevent accidental duplication
+     * and keep key size minimal while allowing a separator when a global underscore already exists.
+     */
+    private function deriveCachePrefix(): string
+    {
+        $globalPrefix = '';
+        try {
+            $cacheCfg = config('Cache');
+            if ($cacheCfg && property_exists($cacheCfg, 'prefix') && is_string($cacheCfg->prefix)) {
+                $globalPrefix = trim($cacheCfg->prefix);
+            }
+        } catch (Throwable $e) { // ignore
+        }
+        if ($globalPrefix !== '' && str_ends_with($globalPrefix, '_')) {
+            return '_twig_';
+        }
+
+        return 'twig_';
     }
 
     /**

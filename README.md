@@ -75,6 +75,25 @@ Diagnóstico (`getDiagnostics()['cache']`):
 }
 ```
 
+#### Cache Key Prefix (Simplified)
+
+The prefix strategy was further simplified: we no longer embed the textual global cache prefix into Twig keys. Instead only two possibilities exist:
+
+* Global `Config\Cache::$prefix` ends with `_` (non-empty) ⇒ prefix used: `_twig_`
+* Otherwise ⇒ prefix used: `twig_`
+
+The previous form `(<global> + '_') . 'twig_'` was removed to avoid accidental duplication and shorten keys. The removed per-Twig `cachePrefix` override remains removed.
+
+Examples:
+* `''` → `twig_`
+* `'app'` → `twig_`
+* `'app_'` → `_twig_`
+* `'mediaprous_'` → `_twig_`
+
+Applies uniformly to compiled templates, compile index, discovery snapshot, warmup summary & invalidation history.
+
+Diagnostics expose the resolved value at `diagnostics['cache']['prefix']`.
+
 ### Persistence Medium Map (`diagnostics['persistence']`)
 Claves posibles: `compile_index`, `discovery_snapshot`, `warmup`, `invalidations`.
 

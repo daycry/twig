@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.1.1] - 2025-09-22
+### Changed
+- Cache key prefix derivation simplified again: only two possible prefixes now: `twig_` (default) or `_twig_` (when global `Config\\Cache::$prefix` ends with an underscore). Global textual prefix is no longer embedded in Twig keys.
+
+### Removed
+- `Config\\Twig::$cachePrefix` option (previous override) remains removed; prior intermediate deterministic rule using the textual global prefix replaced by the minimal two-form rule (prevents duplication like `mediaprous_mediaprous_twig_` and shortens keys).
+
+### Migration Notes
+If you previously relied on keys containing the project prefix (e.g. `app_twig_...`) update any external tooling to look for `twig_` or `_twig_`. Delete any stale entries with old prefixes manually if desired; Twig will regenerate as used. Diagnostics expose the active prefix at `getDiagnostics()['cache']['prefix']`.
+
 ## [3.1.0] - 2025-09-19
 ### Added
 - Automatic discovery snapshot + preload + APCu acceleration in full profile (no manual flags needed).

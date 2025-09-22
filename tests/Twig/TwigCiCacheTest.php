@@ -13,8 +13,9 @@ final class TwigCiCacheTest extends CIUnitTestCase
     {
         $config        = new TwigConfig();
         $config->paths = ['./tests/_support/Templates/'];
-        // cacheBackend deprecated/ignored; auto-detection should still pick CI service
-        $config->cachePrefix = 'twig_test_';
+    // Global cache prefix drives derived twig_ prefix; ensure deterministic value
+    $cacheCfg         = config('Cache');
+    $cacheCfg->prefix = 'twigtest';
         $twig                = new Twig($config);
 
         // First render (compilation)

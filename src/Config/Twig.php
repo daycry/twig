@@ -114,11 +114,6 @@ class Twig extends BaseConfig
      */
     public ?bool $enableExtendedDiagnostics = null;
 
-    /**
-     * @deprecated Prefix is still applied when using CI cache but value is derived automatically from Config\Cache::$prefix.
-     * Custom overrides are discouraged and may be removed in a future major version.
-     */
-    public ?string $cachePrefix = null;
 
     /**
      * @deprecated TTL is still honored if non-zero but auto mode typically uses no expiry (0). Will be simplified later.

@@ -9,12 +9,14 @@ use Daycry\Twig\Twig;
 /** @internal */
 final class TwigCiPersistenceTest extends CIUnitTestCase
 {
-    private function newTwig(string $prefix): Twig
+    private function newTwig(string $globalPrefix): Twig
     {
-        $config              = new TwigConfig();
-        $config->paths       = ['./tests/_support/Templates/'];
-        $config->cachePrefix = $prefix;
-        $config->cacheTtl    = 0;
+        $config         = new TwigConfig();
+        $config->paths  = ['./tests/_support/Templates/'];
+        $config->cacheTtl = 0;
+        // set global cache prefix dynamically
+        $cacheCfg         = config('Cache');
+        $cacheCfg->prefix = rtrim($globalPrefix, '_');
         // Discovery snapshot now enabled by default in full profile; explicit override for clarity
         $config->enableDiscoverySnapshot = true;
 
@@ -23,8 +25,8 @@ final class TwigCiPersistenceTest extends CIUnitTestCase
 
     public function testArtifactsPersistAndClear()
     {
-        $prefix = 'twig_persist_test_';
-        $twig   = $this->newTwig($prefix);
+    $global = 'twig_persist_test_';
+    $twig   = $this->newTwig($global);
         // Trigger discovery & warmup subset
         $list = $twig->listTemplates(false);
         $this->assertNotEmpty($list, 'Discovery list should not be empty');
@@ -39,13 +41,13 @@ final class TwigCiPersistenceTest extends CIUnitTestCase
         $this->assertGreaterThanOrEqual(0, $diag['invalidations']['cumulative_removed']);
 
         // New instance should load persisted state
-        $twig2 = $this->newTwig($prefix);
+    $twig2 = $this->newTwig($global);
         $diag2 = $twig2->getDiagnostics();
         $this->assertSame($diag['invalidations']['cumulative_removed'], $diag2['invalidations']['cumulative_removed']);
 
         // Clear cache and ensure state resets
         $twig2->clearCache(false);
-        $twig3 = $this->newTwig($prefix);
+    $twig3 = $this->newTwig($global);
         $diag3 = $twig3->getDiagnostics();
         $this->assertTrue(($diag3['invalidations']['cumulative_removed'] ?? 0) === 0 || $diag3['invalidations']['cumulative_removed'] < $diag2['invalidations']['cumulative_removed']);
     }
