@@ -2,25 +2,23 @@
 
 namespace Daycry\Twig\Commands;
 
-use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
-use Daycry\Twig\Config\Services;
-use Daycry\Twig\Twig;
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 
-class TwigStats extends BaseCommand
+class TwigStats extends AbstractTwigCommand
 {
-    protected $group       = 'Twig';
     protected $name        = 'twig:stats';
     protected $description = 'Shows statistics about Twig templates and cache usage.';
     protected $usage       = 'twig:stats';
 
     public function run(array $params)
     {
-        /** @var Twig $twig */
-        $twig     = Services::twig();
+        $twig = $this->twig();
+        if ($twig === null) {
+            return EXIT_ERROR;
+        }
         $all      = $twig->listTemplates(true);
         $total    = count($all);
         $compiled = 0;
@@ -38,6 +36,8 @@ class TwigStats extends BaseCommand
         CLI::write('Cache enabled: ' . $cacheEnabled);
         CLI::write('Cache path: ' . $cachePath);
         CLI::write('Cache files present: ' . $cacheFiles);
+
+        return EXIT_SUCCESS;
     }
 
     private function countFiles(string $path): int

@@ -2,14 +2,11 @@
 
 namespace Daycry\Twig\Commands;
 
-use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
-use Daycry\Twig\Config\Services;
-use Daycry\Twig\Twig;
+use InvalidArgumentException;
 
-class TwigInvalidate extends BaseCommand
+class TwigInvalidate extends AbstractTwigCommand
 {
-    protected $group       = 'Twig';
     protected $name        = 'twig:invalidate';
     protected $description = 'Invalidates (removes compiled cache for) a single Twig template.';
     protected $usage       = 'twig:invalidate <template> [--reinit]';
@@ -23,28 +20,38 @@ class TwigInvalidate extends BaseCommand
     public function run(array $params)
     {
         $template = $params[0] ?? null;
-        if ($template === null) {
+        if ($template === null || $template === '') {
             CLI::error('Template logical name is required.');
             CLI::write('Usage: ' . $this->usage);
 
-            return;
+            return EXIT_USER_INPUT;
         }
 
-        $reinit = in_array('--reinit', $params, true) || CLI::getOption('reinit');
+        $reinit = $this->flag('reinit', $params);
+        $twig   = $this->twig();
+        if ($twig === null) {
+            return EXIT_ERROR;
+        }
 
-        /** @var Twig $twig */
-        $twig    = Services::twig();
-        $removed = $twig->invalidateTemplate($template, $reinit);
+        try {
+            $removed = $twig->invalidateTemplate($template, $reinit);
+        } catch (InvalidArgumentException $e) {
+            CLI::error('Invalid template name: ' . $e->getMessage());
+
+            return EXIT_USER_INPUT;
+        }
 
         if ($removed === 0) {
             CLI::write("No cache files matched template '{$template}'.", 'yellow');
 
-            return;
+            return EXIT_SUCCESS;
         }
 
         CLI::write("Removed {$removed} cache file(s) for template '{$template}'.", 'green');
         if ($reinit) {
             CLI::write('Twig Environment reinitialized.', 'green');
         }
+
+        return EXIT_SUCCESS;
     }
 }

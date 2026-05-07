@@ -2,14 +2,11 @@
 
 namespace Daycry\Twig\Commands;
 
-use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
-use Daycry\Twig\Config\Services;
-use Daycry\Twig\Twig;
+use InvalidArgumentException;
 
-class TwigBatchInvalidate extends BaseCommand
+class TwigBatchInvalidate extends AbstractTwigCommand
 {
-    protected $group       = 'Twig';
     protected $name        = 'twig:invalidate:batch';
     protected $description = 'Invalidates multiple Twig templates at once.';
     protected $usage       = 'twig:invalidate:batch <template1> <template2> ... [--reinit]';
@@ -22,20 +19,29 @@ class TwigBatchInvalidate extends BaseCommand
 
     public function run(array $params)
     {
-        $reinit    = in_array('--reinit', $params, true) || CLI::getOption('reinit');
-        $templates = array_values(array_filter($params, static fn ($p) => ! str_starts_with($p, '--')));
+        $reinit    = $this->flag('reinit', $params);
+        $templates = $this->positional($params);
         if (empty($templates)) {
             CLI::error('Provide at least one template logical name.');
 
-            return;
+            return EXIT_USER_INPUT;
         }
-        /** @var Twig $twig */
-        $twig   = Services::twig();
-        $result = $twig->invalidateTemplates($templates, $reinit);
+        $twig = $this->twig();
+        if ($twig === null) {
+            return EXIT_ERROR;
+        }
+
+        try {
+            $result = $twig->invalidateTemplates($templates, $reinit);
+        } catch (InvalidArgumentException $e) {
+            CLI::error('Invalid template name: ' . $e->getMessage());
+
+            return EXIT_USER_INPUT;
+        }
         if ($result['removed'] === 0) {
             CLI::write('No cache files removed.', 'yellow');
 
-            return;
+            return EXIT_SUCCESS;
         }
 
         foreach ($result['templates'] as $name => $count) {
@@ -45,5 +51,7 @@ class TwigBatchInvalidate extends BaseCommand
         if ($result['reinit']) {
             CLI::write('Twig Environment reinitialized.', 'green');
         }
+
+        return EXIT_SUCCESS;
     }
 }

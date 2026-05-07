@@ -2,14 +2,10 @@
 
 namespace Daycry\Twig\Commands;
 
-use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
-use Daycry\Twig\Config\Services;
-use Daycry\Twig\Twig;
 
-class TwigClearCache extends BaseCommand
+class TwigClearCache extends AbstractTwigCommand
 {
-    protected $group       = 'Twig';
     protected $name        = 'twig:clear-cache';
     protected $description = 'Clears the compiled Twig template cache.';
     protected $usage       = 'twig:clear-cache [--reinit]';
@@ -19,22 +15,26 @@ class TwigClearCache extends BaseCommand
 
     public function run(array $params)
     {
-        $reinit = in_array('--reinit', $params, true) || CLI::getOption('reinit');
+        $reinit = $this->flag('reinit', $params);
 
-        /** @var Twig $twig */
-        $twig      = Services::twig();
+        $twig = $this->twig();
+        if ($twig === null) {
+            return EXIT_ERROR;
+        }
         $cachePath = $twig->getCachePath();
         $removed   = $twig->clearCache($reinit);
 
         if ($removed === 0) {
             CLI::write('No cache files found in: ' . $cachePath, 'yellow');
 
-            return;
+            return EXIT_SUCCESS;
         }
 
         CLI::write("Removed {$removed} file(s) from: {$cachePath}", 'green');
         if ($reinit) {
             CLI::write('Twig Environment reinitialized.', 'green');
         }
+
+        return EXIT_SUCCESS;
     }
 }

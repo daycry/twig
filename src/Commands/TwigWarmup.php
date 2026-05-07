@@ -2,14 +2,10 @@
 
 namespace Daycry\Twig\Commands;
 
-use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
-use Daycry\Twig\Config\Services;
-use Daycry\Twig\Twig;
 
-class TwigWarmup extends BaseCommand
+class TwigWarmup extends AbstractTwigCommand
 {
-    protected $group       = 'Twig';
     protected $name        = 'twig:warmup';
     protected $description = 'Precompiles (warms) Twig templates to reduce first-request latency.';
     protected $usage       = 'twig:warmup [template1 template2 ...] [--all] [--force] [--json] [--verbose]';
@@ -25,23 +21,23 @@ class TwigWarmup extends BaseCommand
 
     public function run(array $params)
     {
-        $force   = in_array('--force', $params, true)   || CLI::getOption('force');
-        $all     = in_array('--all', $params, true)     || CLI::getOption('all');
-        $verbose = in_array('--verbose', $params, true) || CLI::getOption('verbose');
-        $asJson  = in_array('--json', $params, true)    || CLI::getOption('json');
+        $force   = $this->flag('force', $params);
+        $all     = $this->flag('all', $params);
+        $verbose = $this->flag('verbose', $params);
+        $asJson  = $this->flag('json', $params);
 
-        /** @var Twig $twig */
-        $twig = Services::twig();
+        $twig = $this->twig();
+        if ($twig === null) {
+            return EXIT_ERROR;
+        }
 
         if ($all) {
-            // Discover first (listTemplates triggers discovery & cache)
             $templates = $twig->listTemplates();
             if ($verbose) {
                 CLI::write('Discovered template count: ' . count($templates), 'yellow');
-                if ($templates) {
-                    foreach ($templates as $t) {
-                        CLI::write(' - ' . $t);
-                    }
+
+                foreach ($templates as $t) {
+                    CLI::write(' - ' . $t);
                 }
             }
             if (empty($templates)) {
@@ -64,25 +60,21 @@ class TwigWarmup extends BaseCommand
                     }
                 }
             }
-            // Dispatch post-warmup event/hook
             if (function_exists('event')) {
                 @event('twig:warmup:after', $result);
             }
 
-            return;
+            return ($result['errors'] ?? 0) > 0 ? EXIT_ERROR : EXIT_SUCCESS;
         }
 
-        // Remove option flags from params to leave only template names
-        $templates = array_values(array_filter($params, static fn ($p) => ! str_starts_with($p, '--')));
+        $templates = $this->positional($params);
         if (empty($templates)) {
             CLI::error('Provide template names or use --all');
 
-            return;
+            return EXIT_USER_INPUT;
         }
         if ($verbose) {
             CLI::write('Templates to warm: ' . implode(', ', $templates), 'yellow');
-        }
-        if ($verbose) {
             putenv('TWIG_WARMUP_VERBOSE=1');
         }
         $result              = $twig->warmup($templates, $force);
@@ -103,5 +95,7 @@ class TwigWarmup extends BaseCommand
         if (function_exists('event')) {
             @event('twig:warmup:after', $result);
         }
+
+        return ($result['errors'] ?? 0) > 0 ? EXIT_ERROR : EXIT_SUCCESS;
     }
 }

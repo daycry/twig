@@ -2,21 +2,12 @@
 
 namespace Daycry\Twig\Commands;
 
-use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
 use Config\Autoload;
 use Exception;
 
-class TwigPublish extends BaseCommand
+class TwigPublish extends AbstractTwigCommand
 {
-    /**
-     * The group the command is lumped under
-     * when listing commands.
-     *
-     * @var string
-     */
-    protected $group = 'Twig';
-
     /**
      * The Command's name
      *
@@ -53,49 +44,61 @@ class TwigPublish extends BaseCommand
      */
     public function run(array $params)
     {
-        $this->determineSourcePath();
-        $this->publishConfig();
+        if (! $this->determineSourcePath()) {
+            return EXIT_ERROR;
+        }
+        if (! $this->publishConfig()) {
+            return EXIT_ERROR;
+        }
         CLI::write('Config file was successfully generated.', 'green');
+
+        return EXIT_SUCCESS;
     }
 
     // --------------------------------------------------------------------
     /**
      * Determines the current source path from which all other files are located.
      */
-    protected function determineSourcePath()
+    protected function determineSourcePath(): bool
     {
         $this->sourcePath = realpath(__DIR__ . '/../');
         if ($this->sourcePath === '/' || empty($this->sourcePath)) {
             CLI::error('Unable to determine the correct source directory. Bailing.');
 
-            exit();
+            return false;
         }
+
+        return true;
     }
 
     // --------------------------------------------------------------------
     /**
      * Publish config file.
      */
-    protected function publishConfig()
+    protected function publishConfig(): bool
     {
         $path    = "{$this->sourcePath}/Config/Twig.php";
         $content = file_get_contents($path);
+        if ($content === false) {
+            CLI::error('Unable to read source config: ' . $path);
+
+            return false;
+        }
         $content = str_replace('namespace Daycry\Twig\Config', 'namespace Config', $content);
         $content = str_replace('extends BaseConfig', 'extends \\Daycry\\Twig\\Config\\Twig', $content);
-        $this->writeFile('Config/Twig.php', $content);
+
+        return $this->writeFile('Config/Twig.php', $content);
     }
 
     // --------------------------------------------------------------------
-    /**
-     * Write a file, catching any exceptions and showing a nicely formatted error.
-     */
+    /** Write a file, catching any exceptions and showing a nicely formatted error. */
     /**
      * Write a file, catching any exceptions and showing a
      * nicely formatted error.
      *
      * @param string $path Relative file path like 'Config/Twig.php'.
      */
-    protected function writeFile(string $path, string $content): void
+    protected function writeFile(string $path, string $content): bool
     {
         helper('filesystem');
 
@@ -108,7 +111,7 @@ class TwigPublish extends BaseCommand
         if (file_exists($appPath . $path) && CLI::prompt('Config file already exists, do you want to replace it?', ['y', 'n']) === 'n') {
             CLI::error('Cancelled');
 
-            exit();
+            return false;
         }
 
         try {
@@ -116,10 +119,12 @@ class TwigPublish extends BaseCommand
         } catch (Exception $e) {
             $this->showError($e);
 
-            exit();
+            return false;
         }
         $path = str_replace($appPath, '', $path);
         CLI::write(CLI::color('Created: ', 'yellow') . $path);
+
+        return true;
     }
     // --------------------------------------------------------------------
 }

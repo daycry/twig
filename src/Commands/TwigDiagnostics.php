@@ -2,13 +2,10 @@
 
 namespace Daycry\Twig\Commands;
 
-use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
-use Daycry\Twig\Twig as TwigViewer;
 
-class TwigDiagnostics extends BaseCommand
+class TwigDiagnostics extends AbstractTwigCommand
 {
-    protected $group       = 'Twig';
     protected $name        = 'twig:diagnostics';
     protected $description = 'Show current Twig diagnostics (renders, cache, discovery, dynamics, warmup).';
     protected $usage       = 'twig:diagnostics [--json]';
@@ -18,14 +15,16 @@ class TwigDiagnostics extends BaseCommand
 
     public function run(array $params)
     {
-        $asJson = in_array('--json', $params, true) || CLI::getOption('json');
-        /** @var TwigViewer $viewer */
-        $viewer = service('twig');
-        $diag   = $viewer->getDiagnostics();
+        $asJson = $this->flag('json', $params);
+        $viewer = $this->twig();
+        if ($viewer === null) {
+            return EXIT_ERROR;
+        }
+        $diag = $viewer->getDiagnostics();
         if ($asJson) {
             CLI::write(json_encode($diag, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 
-            return;
+            return EXIT_SUCCESS;
         }
         CLI::write('Twig Diagnostics');
         CLI::write(str_repeat('-', 60));
@@ -56,8 +55,6 @@ class TwigDiagnostics extends BaseCommand
                 $print('Discovery Medium', $disc['persistence_medium']);
             }
         }
-        if (isset($diag['warmup'])) {
-        }
         if (! empty($diag['warmup'])) {
             $print('Warmup Summary', isset($diag['warmup']['summary']) ? json_encode($diag['warmup']['summary']) : '-');
             $print('Warmup All', isset($diag['warmup']['all']) ? ($diag['warmup']['all'] ? 'yes' : 'no') : '-');
@@ -73,8 +70,6 @@ class TwigDiagnostics extends BaseCommand
             if (isset($pers['invalidations']['medium'])) {
                 $print('Invalidations Medium', $pers['invalidations']['medium']);
             }
-        }
-        if (isset($diag['invalidations'])) {
         }
         if (! empty($diag['invalidations'])) {
             $print('Last Invalidation', $diag['invalidations']['last'] ?? '-');
@@ -96,5 +91,7 @@ class TwigDiagnostics extends BaseCommand
             $print('Total Render ms', $diag['performance']['total_render_time_ms'] ?? 0);
             $print('Avg Render ms', $diag['performance']['avg_render_time_ms'] ?? 0);
         }
+
+        return EXIT_SUCCESS;
     }
 }
