@@ -1,12 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Twig;
 
 use CodeIgniter\Test\CIUnitTestCase;
 use Daycry\Twig\Config\Twig as TwigConfig;
 use Daycry\Twig\Twig;
+use ReflectionClass;
 
-/** @internal */
+/**
+ * @internal
+ */
 final class TwigCachePrefixNormalizationTest extends CIUnitTestCase
 {
     private function getResolvedPrefix(string $globalPrefix): string
@@ -16,8 +21,7 @@ final class TwigCachePrefixNormalizationTest extends CIUnitTestCase
         $cfg              = new TwigConfig();
         $cfg->paths       = ['./tests/_support/Templates/'];
         $twig             = new Twig($cfg);
-        $rp               = (new \ReflectionClass($twig))->getProperty('cachePrefix');
-        $rp->setAccessible(true);
+        $rp               = (new ReflectionClass($twig))->getProperty('cachePrefix');
 
         return $rp->getValue($twig);
     }
