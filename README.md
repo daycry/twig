@@ -6,12 +6,20 @@ Twig is a template language for PHP.
 
 Twig uses a syntax similar to the Django and Jinja template languages which inspired the Twig runtime environment.
 
-[![Build Status](https://github.com/daycry/twig/actions/workflows/phpunit.yml/badge.svg?branch=master)](https://github.com/daycry/twig/actions/workflows/phpunit.yml)
+[![PHP Tests](https://github.com/daycry/twig/actions/workflows/phpunit.yml/badge.svg?branch=master)](https://github.com/daycry/twig/actions/workflows/phpunit.yml)
+[![PHPStan](https://github.com/daycry/twig/actions/workflows/phpstan.yml/badge.svg?branch=master)](https://github.com/daycry/twig/actions/workflows/phpstan.yml)
+[![PHPCSFixer](https://github.com/daycry/twig/actions/workflows/phpcsfixer.yml/badge.svg?branch=master)](https://github.com/daycry/twig/actions/workflows/phpcsfixer.yml)
+[![Rector](https://github.com/daycry/twig/actions/workflows/rector.yml/badge.svg?branch=master)](https://github.com/daycry/twig/actions/workflows/rector.yml)
+[![PHPCPD](https://github.com/daycry/twig/actions/workflows/phpcpd.yml/badge.svg?branch=master)](https://github.com/daycry/twig/actions/workflows/phpcpd.yml)
+[![Deptrac](https://github.com/daycry/twig/actions/workflows/deptrac.yml/badge.svg?branch=master)](https://github.com/daycry/twig/actions/workflows/deptrac.yml)
 [![Coverage Status](https://coveralls.io/repos/github/daycry/twig/badge.svg?branch=master)](https://coveralls.io/github/daycry/twig?branch=master)
-[![Downloads](https://poser.pugx.org/daycry/twig/downloads)](https://packagist.org/packages/daycry/twig)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/daycry/twig)](https://packagist.org/packages/daycry/twig)
-[![GitHub stars](https://img.shields.io/github/stars/daycry/twig)](https://packagist.org/packages/daycry/twig)
-[![GitHub license](https://img.shields.io/github/license/daycry/twig)](https://github.com/daycry/twig/blob/master/LICENSE)
+
+[![PHP Version Require](https://img.shields.io/packagist/dependency-v/daycry/twig/php?color=blue)](https://packagist.org/packages/daycry/twig)
+[![Latest Stable Version](https://img.shields.io/github/v/release/daycry/twig?label=stable)](https://packagist.org/packages/daycry/twig)
+[![Total Downloads](https://img.shields.io/packagist/dt/daycry/twig)](https://packagist.org/packages/daycry/twig)
+[![Monthly Downloads](https://img.shields.io/packagist/dm/daycry/twig)](https://packagist.org/packages/daycry/twig)
+[![GitHub stars](https://img.shields.io/github/stars/daycry/twig?style=social)](https://github.com/daycry/twig/stargazers)
+[![License](https://img.shields.io/github/license/daycry/twig)](https://github.com/daycry/twig/blob/master/LICENSE)
 
 ## v3.0.0 Highlights
 
