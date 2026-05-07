@@ -2,6 +2,7 @@
 
 namespace Daycry\Twig\Registry;
 
+use Daycry\Twig\Contracts\DynamicRegistryInterface;
 use Twig\Environment;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
@@ -11,7 +12,7 @@ use Twig\TwigFunction;
  * Keeps track of queued definitions prior to Environment creation and
  * applies them when requested. Framework logging delegated via global log_message helper.
  */
-class DynamicRegistry
+class DynamicRegistry implements DynamicRegistryInterface
 {
     /**
      * @var array<string,array{callable:callable,options:array}>
@@ -182,10 +183,9 @@ class DynamicRegistry
     public function listFunctionNames(): array
     {
         $names = array_keys($this->functions);
-        if ($this->pendingFunctions) {
-            foreach ($this->pendingFunctions as $pf) {
-                $names[] = $pf['name'];
-            }
+
+        foreach ($this->pendingFunctions as $pf) {
+            $names[] = $pf['name'];
         }
 
         return array_values(array_unique($names));
@@ -199,10 +199,9 @@ class DynamicRegistry
     public function listFilterNames(): array
     {
         $names = array_keys($this->filters);
-        if ($this->pendingFilters) {
-            foreach ($this->pendingFilters as $pf) {
-                $names[] = $pf['name'];
-            }
+
+        foreach ($this->pendingFilters as $pf) {
+            $names[] = $pf['name'];
         }
 
         return array_values(array_unique($names));
