@@ -163,7 +163,7 @@ class Twig extends BaseCollector
 
         try {
             $cfg = config('Twig');
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             $cfg = null;
         }
         $toolbarMinimal       = $cfg->toolbarMinimal ?? false;
@@ -182,7 +182,7 @@ class Twig extends BaseCollector
         if ($toolbarShowTemplates && method_exists($this->viewer, 'listTemplates')) {
             try {
                 $templatesData = $this->viewer->listTemplates($withStatusForPanel);
-            } catch (Throwable $e) {
+            } catch (Throwable) {
                 $templatesData = null;
             }
         }
@@ -193,7 +193,7 @@ class Twig extends BaseCollector
         $json = static function ($v): string {
             try {
                 return json_encode($v, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?: '—';
-            } catch (Throwable $e) {
+            } catch (Throwable) {
                 return '—';
             }
         };
@@ -275,7 +275,7 @@ class Twig extends BaseCollector
         if ($toolbarShowPersistence && ! empty($diag['persistence']) && is_array($diag['persistence'])) {
             $pPairs = [];
 
-            foreach ((array) $diag['persistence'] as $k => $row) {
+            foreach ($diag['persistence'] as $k => $row) {
                 if (is_array($row) && isset($row['medium'])) {
                     $pPairs[$k] = $row['medium'];
                 }
@@ -291,7 +291,7 @@ class Twig extends BaseCollector
 
             foreach ($pairs as $k => $v) {
                 $html .= '<tr>'
-                      . '<td style="padding:2px 4px;border:1px solid #ccc;background:#f8f8f8;width:40%;"><strong>' . htmlspecialchars($k, ENT_QUOTES, 'UTF-8') . '</strong></td>'
+                      . '<td style="padding:2px 4px;border:1px solid #ccc;background:#f8f8f8;width:40%;"><strong>' . htmlspecialchars((string) $k, ENT_QUOTES, 'UTF-8') . '</strong></td>'
                       . '<td style="padding:2px 4px;border:1px solid #ccc;">' . htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8') . '</td>'
                       . '</tr>';
             }
@@ -305,9 +305,8 @@ class Twig extends BaseCollector
                     $html = '<p style="margin:4px 0 2px;font-size:11px;"><strong>' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . ' (' . count($items) . ')</strong></p>';
                     $html .= '<div style="max-height:120px;overflow:auto;border:1px solid #ccc;background:#fafafa;padding:2px 4px;font-size:11px;line-height:1.3;">';
                     $html .= htmlspecialchars(implode(', ', $items), ENT_QUOTES, 'UTF-8');
-                    $html .= '</div>';
 
-                    return $html;
+                    return $html . '</div>';
                 };
                 $html .= '<details style="margin:6px 0 0;">';
                 $html .= '<summary style="cursor:pointer;font-size:11px;">Show function/filter names</summary>';
@@ -353,9 +352,8 @@ class Twig extends BaseCollector
             $extra = $total - $count;
             $html .= '<p style="margin:4px 0 0;font-size:11px;color:#555;">Showing ' . $count . ' of ' . $total . ' templates; compiled=' . $compiledTotal . ($extra > 0 ? ' (+' . $extra . ' more not shown)' : '') . '</p>';
         }
-        $html .= '</div>';
 
-        return $html;
+        return $html . '</div>';
     }
 
     /**

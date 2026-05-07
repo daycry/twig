@@ -7,18 +7,23 @@ use Config\Services;
 use Config\Toolbar;
 use Daycry\Twig\Cache\CICacheAdapter;
 use Daycry\Twig\Cache\TemplateCacheManager;
+use Daycry\Twig\Config\CapabilitiesProfile;
 use Daycry\Twig\Config\Twig as TwigConfig;
 use Daycry\Twig\Debug\Toolbar\Collectors\Twig as CollectorsTwig;
 use Daycry\Twig\Discovery\TemplateDiscovery;
 use Daycry\Twig\Invalidation\TemplateInvalidator;
+use Daycry\Twig\Logging\TwigLogger;
+use Daycry\Twig\Profile\RenderProfiler;
 use Daycry\Twig\Registry\DynamicRegistry;
+use Daycry\Twig\Support\PersistenceDecoder;
+use Daycry\Twig\Support\TemplateNameValidator;
 use FilesystemIterator;
-use InvalidArgumentException;
 // (LoggerInterface import removed — logging now uses global log_message helper only)
+use InvalidArgumentException;
 use LogicException;
+use Psr\Log\LoggerInterface;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
-use ReflectionObject;
 use SplFileInfo;
 use Throwable;
 use Twig\Environment;
@@ -103,15 +108,9 @@ class Twig
     protected int $viewsCount        = 0;
 
     // Diagnostics / instrumentation counters
-    private int $renderCount       = 0;
-    private int $environmentResets = 0;
-    private float $totalRenderTime = 0.0;
-
-    /**
-     * Last rendered logical view name (with extension).
-     */
-    private ?string $lastRenderView = null;
-
+    private int $renderCount           = 0;
+    private int $environmentResets     = 0;
+    private float $totalRenderTime     = 0.0;
     private ?array $lastWarmup         = null; // ['summary'=>array,'all'=>bool,'timestamp'=>float]
     private ?array $lastInvalidation   = null; // ['type'=>string,'removed'=>int,'reinit'=>bool,'timestamp'=>float]
     private int $cumulativeInvalidated = 0;
@@ -142,7 +141,7 @@ class Twig
     /**
      * Dynamic registry extracted (Stage3)
      */
-    private DynamicRegistry $dynamicRegistry;
+    private readonly DynamicRegistry $dynamicRegistry;
 
     /**
      * @var array<string,bool|string> namespace specific autoescape strategies (namespace without @)
@@ -153,17 +152,21 @@ class Twig
      * In-process cache of discovered logical template names.
      */
     // Removed: handled by TemplateDiscovery service
-    private TemplateDiscovery $discovery;
-    private TemplateInvalidator $invalidator;
+    private readonly TemplateDiscovery $discovery;
+    private readonly TemplateInvalidator $invalidator;
 
     // Cache backend: always attempt service('cache'). If handler is File* treat as filesystem;
     // otherwise wrap with CICacheAdapter. Legacy string backend replaced by boolean flag.
     private bool $usingCacheService = false; // true when non-file cache handler in use
     private ?string $cachePrefix    = null;  // resolved during initialize
     private int $cacheTtl           = 0;
+    private readonly TwigLogger $log;
+    private readonly RenderProfiler $renderProfiler;
 
-    public function __construct(?TwigConfig $config = null)
+    public function __construct(?TwigConfig $config = null, ?LoggerInterface $logger = null)
     {
+        $this->log             = new TwigLogger($logger);
+        $this->renderProfiler  = new RenderProfiler();
         $this->discovery       = new TemplateDiscovery();
         $this->cacheManager    = new TemplateCacheManager($this->extension);
         $this->dynamicRegistry = new DynamicRegistry();
@@ -182,7 +185,7 @@ class Twig
                 if ($ciCache && method_exists($this->discovery, 'useCiCache')) {
                     $this->discovery->useCiCache($ciCache, $this->cachePrefix ?? 'twig_', $this->cacheTtl ?? 0);
                 }
-            } catch (Throwable $e) { // ignore
+            } catch (Throwable) { // ignore
             }
         }
         $this->discovery->loadPersisted();
@@ -195,7 +198,7 @@ class Twig
             $config = config('Twig');
         }
 
-        $this->debug = (ENVIRONMENT !== 'production') ? true : false;
+        $this->debug = ENVIRONMENT !== 'production';
 
         $this->extensions = $this->unique_matrix($config->extensions);
 
@@ -240,11 +243,11 @@ class Twig
             } else {
                 $this->usingCacheService = false;
             }
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             $this->usingCacheService = false;
         }
         $this->cachePrefix = $this->deriveCachePrefix();
-        $this->cacheTtl = $config->cacheTtl ?? 0;
+        $this->cacheTtl    = $config->cacheTtl ?? 0;
 
         if (isset($config->saveData)) {
             $this->saveData = $config->saveData;
@@ -257,7 +260,7 @@ class Twig
             $persistSnapshot = $this->capabilities['discoverySnapshot'];
             // Auto strategy: preload & APCu usage enabled when snapshot persistence active (cheap heuristics)
             $enablePreload = $persistSnapshot; // simplifies config surface
-            $useAPCu       = $persistSnapshot && (function_exists('apcu_enabled') ? apcu_enabled() : false);
+            $useAPCu       = $persistSnapshot && (function_exists('apcu_enabled') && apcu_enabled());
             $mtimeDepth    = $persistSnapshot ? 0 : 0; // depth currently fixed; retained parameter for API stability
             $this->discovery->configure(
                 $persistSnapshot,
@@ -281,12 +284,13 @@ class Twig
     private function deriveCachePrefix(): string
     {
         $globalPrefix = '';
+
         try {
             $cacheCfg = config('Cache');
             if ($cacheCfg && property_exists($cacheCfg, 'prefix') && is_string($cacheCfg->prefix)) {
                 $globalPrefix = trim($cacheCfg->prefix);
             }
-        } catch (Throwable $e) { // ignore
+        } catch (Throwable) { // ignore
         }
         if ($globalPrefix !== '' && str_ends_with($globalPrefix, '_')) {
             return '_twig_';
@@ -296,39 +300,13 @@ class Twig
     }
 
     /**
-     * Deriva capacidades finales combinando leanMode + overrides + flags legacy.
+     * Resolve final capability matrix from leanMode + nullable overrides.
+     * Delegates to {@see \Daycry\Twig\Config\CapabilitiesProfile} so the
+     * resolution rules can be tested independently of the Twig facade.
      */
     private function computeCapabilities(TwigConfig $config): void
     {
-        $lean = $config->leanMode ?? false;
-        // Base profile según lean
-        if ($lean) {
-            $base = [
-                'discoverySnapshot'   => false,
-                'warmupSummary'       => false,
-                'invalidationHistory' => false,
-                'dynamicMetrics'      => false,
-                'extendedDiagnostics' => false,
-            ];
-        } else {
-            // In full profile snapshot persistence is now always enabled (was conditional before removal of flags).
-            $base = [
-                'discoverySnapshot'   => true,
-                'warmupSummary'       => true,
-                'invalidationHistory' => true,
-                'dynamicMetrics'      => true,
-                'extendedDiagnostics' => true,
-            ];
-        }
-        // Apply overrides (nullable)
-        $ov                 = static fn (?bool $override, bool $current): bool => $override === null ? $current : $override;
-        $this->capabilities = [
-            'discoverySnapshot'   => $ov($config->enableDiscoverySnapshot ?? null, $base['discoverySnapshot']),
-            'warmupSummary'       => $ov($config->enableWarmupSummary ?? null, $base['warmupSummary']),
-            'invalidationHistory' => $ov($config->enableInvalidationHistory ?? null, $base['invalidationHistory']),
-            'dynamicMetrics'      => $ov($config->enableDynamicMetrics ?? null, $base['dynamicMetrics']),
-            'extendedDiagnostics' => $ov($config->enableExtendedDiagnostics ?? null, $base['extendedDiagnostics']),
-        ];
+        $this->capabilities = CapabilitiesProfile::fromConfig($config)->toArray();
     }
 
     public function resetTwig(): void
@@ -418,10 +396,13 @@ class Twig
 
         $output = $this->twig->render($view, $params);
         // Update render instrumentation
-        $end = microtime(true);
+        $end     = microtime(true);
+        $elapsed = $end - $start;
         $this->renderCount++;
-        $this->totalRenderTime += ($end - $start);
-        $this->lastRenderView = $view;
+        $this->totalRenderTime += $elapsed;
+        if ($this->capabilities['extendedDiagnostics']) {
+            $this->renderProfiler->record($view, $elapsed);
+        }
 
         // Check if DebugToolbar is enabled.
         $filters              = service('filters');
@@ -500,7 +481,8 @@ class Twig
                     $adapter               = new CICacheAdapter($ciCache, $this->cachePrefix ?? 'twig_', $this->cacheTtl ?? 0);
                     $this->config['cache'] = $adapter; // Twig accepts CacheInterface
                 }
-            } catch (Throwable $e) { // fallback silently to file
+            } catch (Throwable $e) {
+                $this->logSwallowed('cache.adapter.swap_failed', $e);
             }
         }
         $twig = new Environment($this->loader, $this->config);
@@ -620,10 +602,10 @@ class Twig
 
         // customized functions
         if (function_exists('anchor')) {
-            $this->twig->addFunction(new TwigFunction('anchor', [$this, 'safe_anchor'], ['is_safe' => ['html']]));
+            $this->twig->addFunction(new TwigFunction('anchor', $this->safe_anchor(...), ['is_safe' => ['html']]));
         }
 
-        $this->twig->addFunction(new TwigFunction('validation_list_errors', [$this, 'validation_list_errors'], ['is_safe' => ['html']]));
+        $this->twig->addFunction(new TwigFunction('validation_list_errors', $this->validation_list_errors(...), ['is_safe' => ['html']]));
         // dynamic registry apply manages its own internal queues
 
         $this->functions_added = true;
@@ -717,7 +699,7 @@ class Twig
         foreach ($matrix as $item) {
             $key = is_array($item)
                 ? 'a:' . json_encode($item, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
-                : 's:' . (string) $item;
+                : 's:' . $item;
             if (isset($seen[$key])) {
                 continue;
             }
@@ -779,14 +761,16 @@ class Twig
                             $ciCache->delete($k);
                         }
                     }
-                } catch (Throwable $e) { // ignore
+                } catch (Throwable $e) {
+                    $this->logSwallowed('cache.clear.ci.delete', $e);
                 }
                 // Reset in-memory tracking
                 $this->lastWarmup            = null;
                 $this->lastInvalidation      = null;
                 $this->cumulativeInvalidated = 0;
                 $this->discovery->invalidate(); // reset discovery cache stats (will persist fresh on next use)
-            } catch (Throwable $e) { // ignore
+            } catch (Throwable $e) {
+                $this->logSwallowed('cache.clear.ci.outer', $e);
             }
             if ($reinitialize) {
                 $this->resetTwig();
@@ -834,13 +818,12 @@ class Twig
      */
     public function invalidateTemplate(string $logicalName, bool $reinitialize = false): int
     {
+        $logicalName = TemplateNameValidator::assertValid($logicalName);
         $this->createTwig();
         $cacheDir = $this->getCachePath();
         $removed  = $this->invalidator->invalidateOne($logicalName, $cacheDir, $reinitialize, fn () => $this->resetTwig(), static function ($level, $msg) { if (function_exists('log_message')) { log_message($level, $msg); } });
         if ($removed > 0) {
             $this->saveCompileIndex();
-        }
-        if ($removed > 0) {
             $this->cumulativeInvalidated += $removed;
             $this->lastInvalidation = ['type' => 'single', 'removed' => $removed, 'reinit' => $reinitialize, 'timestamp' => microtime(true)];
             $this->saveInvalidationsState();
@@ -865,6 +848,9 @@ class Twig
         $compiled     = $skipped = $errors = 0;
         $errorDetails = [];
         $this->loadCompileIndex();
+        // Pre-build a single hash->present index so the per-template lookup is O(1)
+        // instead of O(files) for each call to templateIsCompiled().
+        $compiledHashIndex = $force ? [] : $this->buildCompiledHashIndex($cacheDir);
 
         foreach ($templates as $logical) {
             $logical = trim($logical);
@@ -872,8 +858,9 @@ class Twig
                 continue;
             }
             $name = $logical . $this->extension;
-            // Use cache manager state or heuristic file presence
-            $already = $this->cacheManager->isCompiled($logical) || $this->templateIsCompiled($name, $cacheDir);
+            $hash = md5($name);
+            // Use cache manager state or pre-built hash index (avoids repeated recursive scans).
+            $already = $this->cacheManager->isCompiled($logical) || isset($compiledHashIndex[$hash]);
             if ($already && ! $force) {
                 $skipped++;
 
@@ -913,7 +900,8 @@ class Twig
         if (function_exists('event')) {
             try {
                 @event('twig:warmup:after', $summary + ['mode' => 'subset']);
-            } catch (Throwable $e) { // ignore
+            } catch (Throwable $e) {
+                $this->logSwallowed('warmup.event.subset', $e);
             }
         }
 
@@ -943,7 +931,8 @@ class Twig
 
             try {
                 @event('twig:warmup:after', $payload);
-            } catch (Throwable $e) { // ignore
+            } catch (Throwable $e) {
+                $this->logSwallowed('warmup.event.all', $e);
             }
         }
 
@@ -951,24 +940,39 @@ class Twig
     }
 
     /**
-     * Determine if a template already has a compiled cache file (heuristic).
+     * Scan the compiled-template directory once and return a `hash => true` map
+     * for fast batch lookup. Twig stores compiled classes as `<2 hex>/<32 hex>.php`
+     * (or as `<32 hex>.php` directly), so the hex prefix of the filename is the
+     * full md5 of `<logical>.<extension>`.
+     *
+     * @return array<string,bool>
      */
-    private function templateIsCompiled(string $templateWithExt, string $cacheDir): bool
+    private function buildCompiledHashIndex(string $cacheDir): array
     {
         if ($cacheDir === '' || ! is_dir($cacheDir)) {
-            return false;
+            return [];
         }
-        $hash = md5($templateWithExt);
-        $it   = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($cacheDir, FilesystemIterator::SKIP_DOTS));
+        $index = [];
 
-        /** @var SplFileInfo $fi */
-        foreach ($it as $fi) {
-            if ($fi->isFile() && str_contains($fi->getFilename(), $hash)) {
-                return true;
+        try {
+            $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($cacheDir, FilesystemIterator::SKIP_DOTS));
+
+            /** @var SplFileInfo $fi */
+            foreach ($it as $fi) {
+                if (! $fi->isFile()) {
+                    continue;
+                }
+                $name = $fi->getFilename();
+                // Twig compiled filenames begin with the md5 of the logical name+extension.
+                if (preg_match('/^([a-f0-9]{32})/', $name, $m) === 1) {
+                    $index[$m[1]] = true;
+                }
             }
+        } catch (Throwable $e) {
+            $this->logSwallowed('warmup.scan_failed', $e);
         }
 
-        return false;
+        return $index;
     }
 
     /**
@@ -986,7 +990,7 @@ class Twig
                     if (function_exists('log_message')) {
                         log_message('info', 'event=twig.extension.registered extension=' . $extensionFqcn);
                     }
-                } catch (LogicException $e) {
+                } catch (LogicException) {
                     // Extensions already initialized: queue and force recreation
                     $this->pendingExtensions[] = $extensionFqcn;
                     $this->twig                = null;
@@ -1158,6 +1162,13 @@ class Twig
      */
     public function addPath(string $path, ?string $namespace = null): self
     {
+        if ($path === '' || str_contains($path, "\0")) {
+            throw new InvalidArgumentException('Twig::addPath: path must be a non-empty string without null bytes.');
+        }
+        if ($namespace !== null) {
+            $namespace = TemplateNameValidator::assertValidNamespace($namespace);
+            $namespace = is_string($namespace) ? ltrim($namespace, '@') : null;
+        }
         $entry         = $namespace ? [$path, $namespace] : $path;
         $this->paths[] = $entry;
         // Update loader if already instantiated
@@ -1171,7 +1182,7 @@ class Twig
         // Invalidate discovery so new path is included
         $this->discovery->invalidate();
         if (function_exists('log_message')) {
-            log_message('info', 'event=twig.path.added path=' . $path . ' namespace=' . (string) $namespace);
+            log_message('info', 'event=twig.path.added path=' . $path . ' namespace=' . $namespace);
         }
 
         return $this;
@@ -1207,7 +1218,7 @@ class Twig
                 };
                 $ext->setDefaultStrategy($map === [] ? 'html' : $callable);
             }
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             // ignore; escaper extension not available yet
         }
     }
@@ -1253,7 +1264,7 @@ class Twig
                         }
                     }
                 }
-            } catch (Throwable $e) { // ignore
+            } catch (Throwable) { // ignore
             }
             $loadedByPath[$key] = true;
 
@@ -1303,7 +1314,7 @@ class Twig
                     continue;
                 }
                 // Quick reject: only PHP files
-                if (substr($fi->getFilename(), -4) !== '.php') {
+                if (! str_ends_with($fi->getFilename(), '.php')) {
                     continue;
                 }
                 // Cheap content scan (first 2KB) for Twig template class marker
@@ -1312,7 +1323,7 @@ class Twig
                     $compiledFiles[] = $fi->getPathname();
                 }
             }
-        } catch (Throwable $e) { // ignore scan errors
+        } catch (Throwable) { // ignore scan errors
         }
         if ($compiledFiles === []) {
             return; // nothing to rebuild
@@ -1338,7 +1349,7 @@ class Twig
                     $key = ($this->cachePrefix ?? 'twig_') . 'compile.index';
                     $cache->save($key, json_encode($this->cacheManager->getCompiledTemplates(), JSON_UNESCAPED_SLASHES), $this->cacheTtl ?? 0);
                 }
-            } catch (Throwable $e) { // ignore
+            } catch (Throwable) { // ignore
             }
 
             return;
@@ -1413,18 +1424,18 @@ class Twig
                     // simple case-insensitive prefix match if pattern ends with * or exact match otherwise
                     if ($pattern[strlen($pattern) - 1] === '*') {
                         $prefix = substr($pattern, 0, -1);
-                        if (str_starts_with(strtolower($candidate), strtolower($prefix))) {
+                        if (str_starts_with(strtolower((string) $candidate), strtolower($prefix))) {
                             $filtered[] = $logical;
                         }
                     } else {
-                        if (strcasecmp($candidate, $pattern) === 0) {
+                        if (strcasecmp((string) $candidate, $pattern) === 0) {
                             $filtered[] = $logical;
                         }
                     }
 
                     continue;
                 }
-                if ($regex && preg_match($regex, $candidate) === 1) {
+                if ($regex && preg_match($regex, (string) $candidate) === 1) {
                     $filtered[] = $logical;
                 }
             }
@@ -1449,6 +1460,11 @@ class Twig
      */
     public function invalidateTemplates(array $logicalNames, bool $reinitialize = false): array
     {
+        $logicalNames = TemplateNameValidator::filterValid($logicalNames, static function (string $raw, string $err): void {
+            if (function_exists('log_message')) {
+                log_message('warning', 'event=twig.invalidate.skipped raw=' . $raw . ' reason=' . $err);
+            }
+        });
         $this->createTwig();
         $cacheDir = $this->getCachePath();
         $result   = $this->invalidator->invalidateMany($logicalNames, $cacheDir, $reinitialize, fn () => $this->resetTwig(), static function ($level, $msg) {
@@ -1458,8 +1474,6 @@ class Twig
         });
         if ($result['removed'] > 0) {
             $this->saveCompileIndex();
-        }
-        if ($result['removed'] > 0) {
             $this->cumulativeInvalidated += $result['removed'];
             $this->lastInvalidation = ['type' => 'batch', 'removed' => $result['removed'], 'reinit' => $reinitialize, 'timestamp' => microtime(true)];
             $this->saveInvalidationsState();
@@ -1474,6 +1488,7 @@ class Twig
      */
     public function invalidateNamespace(?string $namespace, bool $reinitialize = false): array
     {
+        $namespace = TemplateNameValidator::assertValidNamespace($namespace);
         $this->createTwig();
         if (! $this->loader instanceof FilesystemLoader) {
             return ['removed' => 0, 'templates' => [], 'reinit' => false];
@@ -1486,8 +1501,6 @@ class Twig
         });
         if ($result['removed'] > 0) {
             $this->saveCompileIndex();
-        }
-        if ($result['removed'] > 0) {
             $this->cumulativeInvalidated += $result['removed'];
             $this->lastInvalidation = ['type' => 'namespace', 'removed' => $result['removed'], 'reinit' => $reinitialize, 'timestamp' => microtime(true)];
             $this->saveInvalidationsState();
@@ -1497,12 +1510,13 @@ class Twig
     }
 
     /**
-     * Discover all logical template names currently available (without filtering by compilation state).
-     * Used for namespace invalidation & potential future listing.
+     * Aggregate diagnostics for the debug toolbar and external observability.
+     * Sections are conditionally included based on the active capability
+     * profile (Lean vs Full + nullable overrides). See
+     * `docs/DIAGNOSTICS_REFERENCE.md` for the full schema.
      *
-     * @return list<string>
-     *
-     * /** Aggregate diagnostics for debug toolbar. */
+     * @return array<string,mixed>
+     */
     public function getDiagnostics(): array
     {
         // Ensure compile index loaded so compiled templates count is accurate when called early in request.
@@ -1510,7 +1524,8 @@ class Twig
             try {
                 $this->loadCompileIndex();
                 $this->rebuildCompileIndexIfEmpty();
-            } catch (Throwable $e) { // ignore
+            } catch (Throwable $e) {
+                $this->logSwallowed('diagnostics.compile_index.load', $e);
             }
         }
         // Load persisted warmup summary if not already present (e.g. CLI warmup in previous request)
@@ -1559,7 +1574,7 @@ class Twig
             try {
                 $c            = Services::cache();
                 $serviceClass = $c ? $c::class : null;
-            } catch (Throwable $e) {
+            } catch (Throwable) {
                 $serviceClass = null;
             }
         }
@@ -1575,7 +1590,7 @@ class Twig
                 'prefix'              => $this->cachePrefix,
                 'ttl'                 => $this->cacheTtl,
                 'compiled_templates'  => $compiledTemplatesCount,
-                'reconstructed_index' => property_exists($this, 'reconstructedIndex') ? true : false,
+                'reconstructed_index' => property_exists($this, 'reconstructedIndex'),
             ],
             'performance' => [
                 'total_render_time_ms' => round($this->totalRenderTime * 1000, 2),
@@ -1598,6 +1613,8 @@ class Twig
                 'configured' => count($this->extensions),
                 'pending'    => count($this->pendingExtensions),
             ];
+            $diag['performance']['per_template']  = $this->renderProfiler->snapshot();
+            $diag['performance']['top_templates'] = $this->renderProfiler->topByTotal(10);
         }
 
         if ($this->capabilities['extendedDiagnostics']) {
@@ -1675,7 +1692,8 @@ class Twig
                 if ($cache) {
                     $cache->save(($this->cachePrefix ?? 'twig_') . 'invalidations', json_encode($payload, JSON_UNESCAPED_SLASHES), $this->cacheTtl ?? 0);
                 }
-            } catch (Throwable $e) { // ignore
+            } catch (Throwable $e) {
+                $this->logSwallowed('invalidations.save.ci', $e);
             }
 
             return;
@@ -1687,7 +1705,8 @@ class Twig
 
         try {
             @file_put_contents($path, json_encode($payload, JSON_UNESCAPED_SLASHES));
-        } catch (Throwable $e) { // ignore
+        } catch (Throwable $e) {
+            $this->logSwallowed('invalidations.save.file', $e);
         }
     }
 
@@ -1703,19 +1722,19 @@ class Twig
             try {
                 $cache = Services::cache();
                 if ($cache) {
-                    $raw = $cache->get(($this->cachePrefix ?? 'twig_') . 'invalidations');
-                    if (is_string($raw)) {
-                        $data = json_decode($raw, true);
-                        if (is_array($data)) {
-                            if (isset($data['cumulative'])) {
-                                $this->cumulativeInvalidated = (int) $data['cumulative'];
-                            } if (isset($data['last'])) {
-                                $this->lastInvalidation = $data['last'];
-                            }
+                    $raw  = $cache->get(($this->cachePrefix ?? 'twig_') . 'invalidations');
+                    $data = PersistenceDecoder::decode(is_string($raw) ? $raw : null);
+                    if ($data !== null) {
+                        if (isset($data['cumulative']) && (is_int($data['cumulative']) || is_numeric($data['cumulative']))) {
+                            $this->cumulativeInvalidated = (int) $data['cumulative'];
+                        }
+                        if (isset($data['last']) && is_array($data['last'])) {
+                            $this->lastInvalidation = $data['last'];
                         }
                     }
                 }
-            } catch (Throwable $e) { // ignore
+            } catch (Throwable $e) {
+                $this->logSwallowed('invalidations.load.ci', $e);
             }
 
             return;
@@ -1726,18 +1745,19 @@ class Twig
         }
 
         try {
-            $raw = @file_get_contents($path);
-            if ($raw === false) {
+            $raw  = @file_get_contents($path);
+            $data = PersistenceDecoder::decode($raw === false ? null : $raw);
+            if ($data === null) {
                 return;
-            } $data = json_decode($raw, true);
-            if (! is_array($data)) {
-                return;
-            } if (isset($data['cumulative'])) {
+            }
+            if (isset($data['cumulative']) && (is_int($data['cumulative']) || is_numeric($data['cumulative']))) {
                 $this->cumulativeInvalidated = (int) $data['cumulative'];
-            } if (isset($data['last'])) {
+            }
+            if (isset($data['last']) && is_array($data['last'])) {
                 $this->lastInvalidation = $data['last'];
             }
-        } catch (Throwable $e) { // ignore
+        } catch (Throwable $e) {
+            $this->logSwallowed('invalidations.load.file', $e);
         }
     }
 
@@ -1759,7 +1779,8 @@ class Twig
                 if ($cache) {
                     $cache->save(($this->cachePrefix ?? 'twig_') . 'warmup.summary', json_encode($payload, JSON_UNESCAPED_SLASHES), $this->cacheTtl ?? 0);
                 }
-            } catch (Throwable $e) { // ignore
+            } catch (Throwable $e) {
+                $this->logSwallowed('warmup.summary.save.ci', $e);
             }
 
             return;
@@ -1768,7 +1789,8 @@ class Twig
 
         try {
             @file_put_contents($path, json_encode($payload, JSON_UNESCAPED_SLASHES));
-        } catch (Throwable $e) { // ignore
+        } catch (Throwable $e) {
+            $this->logSwallowed('warmup.summary.save.file', $e);
         }
     }
 
@@ -1785,18 +1807,17 @@ class Twig
                 $cache = Services::cache();
                 if ($cache) {
                     $json = $cache->get(($this->cachePrefix ?? 'twig_') . 'warmup.summary');
-                    if (is_string($json)) {
-                        $data = json_decode($json, true);
-                        if (is_array($data) && isset($data['summary'])) {
-                            $this->lastWarmup = [
-                                'summary'   => $data['summary'],
-                                'all'       => (bool) ($data['all'] ?? false),
-                                'timestamp' => isset($data['timestamp']) ? (float) $data['timestamp'] : microtime(true),
-                            ];
-                        }
+                    $data = PersistenceDecoder::decode(is_string($json) ? $json : null);
+                    if ($data !== null && isset($data['summary']) && is_array($data['summary'])) {
+                        $this->lastWarmup = [
+                            'summary'   => $data['summary'],
+                            'all'       => (bool) ($data['all'] ?? false),
+                            'timestamp' => isset($data['timestamp']) ? (float) $data['timestamp'] : microtime(true),
+                        ];
                     }
                 }
-            } catch (Throwable $e) { // ignore
+            } catch (Throwable $e) {
+                $this->logSwallowed('warmup.summary.load.ci', $e);
             }
 
             return;
@@ -1808,11 +1829,8 @@ class Twig
 
         try {
             $json = @file_get_contents($path);
-            if ($json === false) {
-                return;
-            }
-            $data = json_decode($json, true);
-            if (! is_array($data) || ! isset($data['summary'])) {
+            $data = PersistenceDecoder::decode($json === false ? null : $json);
+            if ($data === null || ! isset($data['summary']) || ! is_array($data['summary'])) {
                 return;
             }
             $this->lastWarmup = [
@@ -1820,7 +1838,8 @@ class Twig
                 'all'       => (bool) ($data['all'] ?? false),
                 'timestamp' => isset($data['timestamp']) ? (float) $data['timestamp'] : microtime(true),
             ];
-        } catch (Throwable $e) { // ignore
+        } catch (Throwable $e) {
+            $this->logSwallowed('warmup.summary.load.file', $e);
         }
     }
 
@@ -1834,36 +1853,32 @@ class Twig
         return $this->discovery->listAll($this->loader, $this->extension);
     }
 
+    // compiledHash moved to TemplateInvalidator (centralized)
+
     /**
-     * Helper to extract the internal paths map from the loader safely.
-     *
-     * @return array<string,list<string>>
+     * Centralized logger for swallowed exceptions: keeps catch(Throwable){} blocks
+     * from hiding real production failures while preserving best-effort semantics.
      */
-    private function getLoaderPathsMap(): array
+    private function logSwallowed(string $eventSuffix, Throwable $e): void
     {
-        if (! $this->loader instanceof FilesystemLoader) {
-            return [];
-        }
-
-        // Reuse discovery's reflection to avoid duplication (temporary until full extraction phases complete)
-        // Slightly inefficient: we call discovery->listAll solely to derive unique paths; acceptable for refactor stage.
-        // TODO Stage2+: Move this logic to dedicated Cache/Discovery service entirely.
-        try {
-            $ref = new ReflectionObject($this->loader);
-            if (! $ref->hasProperty('paths')) {
-                return [];
-            }
-            $prop = $ref->getProperty('paths');
-            $prop->setAccessible(true);
-            $pathsMap = $prop->getValue($this->loader);
-
-            return is_array($pathsMap) ? $pathsMap : [];
-        } catch (Throwable $e) {
-            return [];
-        }
+        $this->log->debug('event=twig.' . $eventSuffix . ' msg=' . $e->getMessage());
     }
 
-    // compiledHash moved to TemplateInvalidator (centralized)
+    /**
+     * Inject (or replace) a PSR-3 logger. When unset, the library falls back to
+     * CodeIgniter's `log_message()` helper.
+     */
+    public function setLogger(?LoggerInterface $logger): self
+    {
+        $this->log->setLogger($logger);
+
+        return $this;
+    }
+
+    public function getLogger(): ?LoggerInterface
+    {
+        return $this->log->getLogger();
+    }
 
     // End of class
 }

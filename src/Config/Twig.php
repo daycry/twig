@@ -114,7 +114,6 @@ class Twig extends BaseConfig
      */
     public ?bool $enableExtendedDiagnostics = null;
 
-
     /**
      * @deprecated TTL is still honored if non-zero but auto mode typically uses no expiry (0). Will be simplified later.
      */
