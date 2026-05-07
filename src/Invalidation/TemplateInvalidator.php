@@ -2,8 +2,9 @@
 
 namespace Daycry\Twig\Invalidation;
 
-use Daycry\Twig\Cache\TemplateCacheManager;
-use Daycry\Twig\Discovery\TemplateDiscovery;
+use Daycry\Twig\Contracts\CacheManagerInterface;
+use Daycry\Twig\Contracts\DiscoveryInterface;
+use Daycry\Twig\Contracts\InvalidatorInterface;
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -14,12 +15,12 @@ use Twig\Loader\FilesystemLoader;
  * Handles invalidation (single, batch, namespace) of compiled Twig templates.
  * Delegates discovery to TemplateDiscovery and compiled state tracking to TemplateCacheManager.
  */
-class TemplateInvalidator
+class TemplateInvalidator implements InvalidatorInterface
 {
     public function __construct(
-        private TemplateCacheManager $cacheManager,
-        private TemplateDiscovery $discovery,
-        private string $extension,
+        private readonly CacheManagerInterface $cacheManager,
+        private readonly DiscoveryInterface $discovery,
+        private readonly string $extension,
     ) {
     }
 
@@ -52,7 +53,7 @@ class TemplateInvalidator
                 continue;
             }
             $path = $file->getPathname();
-            if (str_contains($path, $hash)) {
+            if (str_contains($file->getFilename(), $hash)) {
                 if (@unlink($path)) {
                     $removed++;
                 }
@@ -116,12 +117,14 @@ class TemplateInvalidator
                 continue;
             }
             $path = $file->getPathname();
+            $name = $file->getFilename();
 
             foreach ($hashMap as $hash => $logical) {
-                if (str_contains($path, $hash)) {
+                if (str_contains($name, $hash)) {
                     if (@unlink($path)) {
                         $removedPer[$logical]++;
-                    } break;
+                    }
+                    break;
                 }
             }
         }

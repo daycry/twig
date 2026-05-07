@@ -3,6 +3,7 @@
 namespace Daycry\Twig\Discovery;
 
 use CodeIgniter\Cache\CacheInterface;
+use Daycry\Twig\Contracts\DiscoveryInterface;
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -15,7 +16,7 @@ use Twig\Loader\FilesystemLoader;
  * TemplateDiscovery encapsulates template enumeration & in-process caching.
  * Enhanced with optional list persistence, fingerprinting and APCu reuse.
  */
-class TemplateDiscovery
+class TemplateDiscovery implements DiscoveryInterface
 {
     /**
      * @var list<string>|null
@@ -123,7 +124,10 @@ class TemplateDiscovery
                     }
                 }
             }
-        } catch (Throwable $e) { // ignore migration errors
+        } catch (Throwable $e) {
+            if (function_exists('log_message')) {
+                log_message('debug', 'event=twig.discovery.migration_failed msg=' . $e->getMessage());
+            }
         }
     }
 
@@ -146,12 +150,14 @@ class TemplateDiscovery
         if ($this->persistMedium === 'ci' && $this->ciCache) {
             try {
                 $this->ciCache->save($this->ciPrefix . 'disc.stats', json_encode($data, JSON_UNESCAPED_SLASHES), $this->ciTtl);
-            } catch (Throwable $e) { // ignore
+            } catch (Throwable $e) {
+                $this->logSwallowed('persist.stats.ci', $e);
             }
             if ($this->persistList && $this->cache !== null) {
                 try {
                     $this->ciCache->save($this->ciPrefix . 'disc.list', json_encode(['fingerprint' => $this->persistedFingerprint, 'list' => $this->cache], JSON_UNESCAPED_SLASHES), $this->ciTtl);
-                } catch (Throwable $e) { // ignore
+                } catch (Throwable $e) {
+                    $this->logSwallowed('persist.list.ci', $e);
                 }
             }
         } else {
@@ -161,12 +167,14 @@ class TemplateDiscovery
 
             try {
                 @file_put_contents($this->persistPath, json_encode($data, JSON_UNESCAPED_SLASHES));
-            } catch (Throwable $e) { // ignore
+            } catch (Throwable $e) {
+                $this->logSwallowed('persist.stats.file', $e);
             }
             if ($this->persistList && $this->cache !== null && $this->listSnapshotPath) {
                 try {
                     @file_put_contents($this->listSnapshotPath, json_encode(['fingerprint' => $this->persistedFingerprint, 'list' => $this->cache], JSON_UNESCAPED_SLASHES));
-                } catch (Throwable $e) { // ignore
+                } catch (Throwable $e) {
+                    $this->logSwallowed('persist.list.file', $e);
                 }
             }
         }
@@ -175,7 +183,8 @@ class TemplateDiscovery
                 if (function_exists('apcu_store')) {
                     apcu_store($this->apcuKey($this->persistedFingerprint), $this->cache);
                 }
-            } catch (Throwable $e) { // ignore
+            } catch (Throwable $e) {
+                $this->logSwallowed('persist.apcu', $e);
             }
         }
     }
@@ -195,7 +204,8 @@ class TemplateDiscovery
                         $this->persistedFingerprint = $data['fingerprint'] ?? $this->persistedFingerprint;
                     }
                 }
-            } catch (Throwable $e) { // ignore
+            } catch (Throwable $e) {
+                $this->logSwallowed('load.stats.ci', $e);
             }
         } else {
             if (! $this->persistPath || ! is_file($this->persistPath)) {
@@ -216,7 +226,8 @@ class TemplateDiscovery
                 $this->invalidations        = (int) ($data['invalidations'] ?? $this->invalidations);
                 $this->persistedCount       = isset($data['persistedCount']) ? (int) $data['persistedCount'] : (isset($data['count']) ? (int) $data['count'] : $this->persistedCount);
                 $this->persistedFingerprint = $data['fingerprint'] ?? $this->persistedFingerprint;
-            } catch (Throwable $e) { // ignore
+            } catch (Throwable $e) {
+                $this->logSwallowed('load.stats.file', $e);
             }
         }
         if ($this->persistList && $this->preload && $this->cache === null) {
@@ -288,7 +299,8 @@ class TemplateDiscovery
 
                             return $this->cache;
                         }
-                    } catch (Throwable $e) { // ignore
+                    } catch (Throwable $e) {
+                        $this->logSwallowed('apcu.fetch', $e);
                     }
                 }
                 $restored = $this->restoreListSnapshot();
@@ -323,7 +335,7 @@ class TemplateDiscovery
                     if (substr($filePath, -$extLen) !== $extension) {
                         continue;
                     }
-                    $rel     = ltrim(str_replace(['\\', '/'], '/', substr($filePath, strlen($base))), '/');
+                    $rel     = ltrim(str_replace(['\\', '/'], '/', substr($filePath, strlen((string) $base))), '/');
                     $logical = substr($rel, 0, -$extLen);
                     if ($ns !== FilesystemLoader::MAIN_NAMESPACE) {
                         $logical = '@' . $ns . '/' . $logical;
@@ -370,12 +382,11 @@ class TemplateDiscovery
             if (! $ref->hasProperty('paths')) {
                 return [];
             }
-            $prop = $ref->getProperty('paths');
-            $prop->setAccessible(true);
+            $prop     = $ref->getProperty('paths');
             $pathsMap = $prop->getValue($loader);
 
             return is_array($pathsMap) ? $pathsMap : [];
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             return [];
         }
     }
@@ -392,7 +403,7 @@ class TemplateDiscovery
             if (! is_array($paths)) {
                 continue;
             }
-            $sorted = array_values(array_filter($paths, 'is_string'));
+            $sorted = array_values(array_filter($paths, is_string(...)));
             sort($sorted);
             $canonicalPathsMap[$ns] = $sorted;
         }
@@ -417,11 +428,13 @@ class TemplateDiscovery
         if (! is_dir($dir)) {
             return 0;
         }
-        $mt = @filemtime($dir) ?: 0;
+        $rootMt = @filemtime($dir) ?: 0;
         if ($depth <= 0) {
-            return $mt;
+            return $rootMt;
         }
-        $queue = [[$dir, 0]];
+        // Collect (path => mtime) for stable, order-independent fingerprinting.
+        $samples = [$dir => $rootMt];
+        $queue   = [[$dir, 0]];
 
         while ($queue) {
             [$current,$d] = array_shift($queue);
@@ -436,13 +449,15 @@ class TemplateDiscovery
                 }
                 $full = $current . DIRECTORY_SEPARATOR . $it;
                 if (is_dir($full)) {
-                    $mt ^= (@filemtime($full) ?: 0);
-                    $queue[] = [$full, $d + 1];
+                    $samples[$full] = @filemtime($full) ?: 0;
+                    $queue[]        = [$full, $d + 1];
                 }
             }
         }
+        // Stable ordering avoids collisions caused by XOR-cancellation when two dirs share mtime.
+        ksort($samples);
 
-        return $mt;
+        return crc32(json_encode($samples)) & 0xFFFFFFFF;
     }
 
     private function restoreListSnapshot(): ?array
@@ -462,7 +477,7 @@ class TemplateDiscovery
                 }
 
                 return $data['list'];
-            } catch (Throwable $e) {
+            } catch (Throwable) {
                 return null;
             }
         } else {
@@ -484,7 +499,7 @@ class TemplateDiscovery
                 }
 
                 return $data['list'];
-            } catch (Throwable $e) {
+            } catch (Throwable) {
                 return null;
             }
         }
@@ -503,6 +518,16 @@ class TemplateDiscovery
     private function apcuKey(string $fingerprint): string
     {
         return 'twig.discovery.list.' . $fingerprint;
+    }
+
+    /**
+     * Log a swallowed exception so production failures don't disappear silently.
+     */
+    private function logSwallowed(string $eventSuffix, Throwable $e): void
+    {
+        if (function_exists('log_message')) {
+            log_message('debug', 'event=twig.discovery.' . $eventSuffix . ' msg=' . $e->getMessage());
+        }
     }
 
     /**

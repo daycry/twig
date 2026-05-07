@@ -2,26 +2,26 @@
 
 namespace Daycry\Twig\Cache;
 
+use Daycry\Twig\Contracts\CacheManagerInterface;
+use Daycry\Twig\Support\PersistenceDecoder;
+
 /**
  * TemplateCacheManager centralizes cache path handling, compile index persistence,
  * and cache enable/disable operations. It is framework-agnostic and expects the
  * caller (facade) to provide actual filesystem paths and configuration mutations.
  */
-class TemplateCacheManager
+class TemplateCacheManager implements CacheManagerInterface
 {
     /**
      * @var array<string,bool>
      */
     private array $compiledTemplates = [];
 
-    private bool $compileIndexLoaded = false;
-    private string $extension;
-    private $logger; // callable|string|null log_message compatibility
+    private bool $compileIndexLoaded = false; // callable|string|null log_message compatibility
 
-    public function __construct(string $extension, $logger = null)
+    public function __construct()
     {
-        $this->extension = $extension;
-        $this->logger    = $logger; // optional callable(level,string)
+        // optional callable(level,string)
     }
 
     /**
@@ -63,8 +63,8 @@ class TemplateCacheManager
         if (is_file($indexPath)) {
             $json = @file_get_contents($indexPath);
             if ($json !== false) {
-                $data = json_decode($json, true);
-                if (is_array($data)) {
+                $data = PersistenceDecoder::decode(is_string($json) ? $json : null);
+                if ($data !== null) {
                     foreach ($data as $k => $v) {
                         if (is_string($k) && ($v === true || $v === 1)) {
                             $this->compiledTemplates[$k] = true;
@@ -88,7 +88,7 @@ class TemplateCacheManager
         if (! is_dir($dir)) {
             return;
         }
-        @file_put_contents($indexPath, json_encode($this->compiledTemplates, JSON_PRETTY_PRINT));
+        @file_put_contents($indexPath, json_encode($this->compiledTemplates, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
     }
 
     /**
