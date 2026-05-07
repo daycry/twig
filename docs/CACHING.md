@@ -294,7 +294,7 @@ Pull requests for new safe backends & richer diagnostics are welcome.
 ## 19. Version Compatibility
 - Twig 3.x
 - CodeIgniter 4.x
-- PHP 8.1+
+- PHP 8.2+
 
 All caching layers degrade gracefully if a feature (APCu, CI cache) is unavailable.
 

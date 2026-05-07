@@ -1,6 +1,82 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to this project will be documented in this file. The
+format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
+the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- **PSR-3 logger injection.** Pass an optional `Psr\Log\LoggerInterface` to the
+  `Twig` constructor (or `setLogger()` later) to redirect structured log output
+  to monolog/syslog/etc. When unset the library still falls back to the
+  CodeIgniter `log_message()` helper.
+- **`twig:lint`** CLI command. Validates Twig syntax without rendering — wraps
+  `Environment::tokenize()` + `parse()` so it is safe in CI/CD.
+- **`twig:doctor`** CLI command. Health-check that reports missing template
+  paths, unwritable cache directories, missing/disabled APCu, and reconstructed
+  compile indexes. Exits non-zero when there is at least one error-level finding.
+- **Per-template render profiler.** When `extendedDiagnostics` is on,
+  `getDiagnostics()['performance']` now includes `per_template` and
+  `top_templates` lists with `count`, `total_ms`, `avg_ms`, `max_ms`.
+- **Service interfaces** in `Daycry\Twig\Contracts\` — `DiscoveryInterface`,
+  `CacheManagerInterface`, `InvalidatorInterface`, `DynamicRegistryInterface` —
+  enabling test doubles and alternate implementations.
+- **Public enums** in `Daycry\Twig\Constants\` — `TwigEvent`, `TwigCacheKey`,
+  `CacheSource` — replacing magic strings.
+- **`AbstractTwigCommand`** base class for CLI commands consolidating the
+  shared group, service resolution, flag parsing, and JSON output helpers.
+- **`Daycry\Twig\Support\TemplateNameValidator`** — centralized
+  validator that rejects `..`, leading slashes, null bytes and
+  out-of-charset characters in template names supplied to public APIs and CLI.
+- **`Daycry\Twig\Support\PersistenceDecoder`** — defensive JSON decoder used
+  when reading compile-index, warmup-summary, invalidations and discovery
+  snapshots; tampered or wrong-typed payloads return `null` instead of crashing.
+- **`tests/_support/Traits/TwigTestSetup.php`** — shared trait with
+  `setupTwigWithTemplates()`, `setupTwigWithInMemory()`, `cleanCacheDir()`.
+- **Documentation:** `docs/TROUBLESHOOTING.md`, `docs/DIAGNOSTICS_REFERENCE.md`,
+  `CONTRIBUTING.md`.
+
+### Changed
+- **PHP requirement bumped to ≥ 8.2.** Enables `readonly` properties, `enum`,
+  intersection types, first-class callable, DNF types. CI matrix runs on 8.2,
+  8.3, 8.4 and 8.5; `composer.json` and `rector.php` reflect the new floor.
+- **CICacheAdapter signs payloads with HMAC-SHA256.** Compiled-template entries
+  written through the CI cache backend are now authenticated; tampered or
+  unsigned legacy entries are dropped (and logged) instead of being `eval()`ed.
+  HMAC key derives from `Config\Encryption::$key` when available, falling back
+  to a stable per-install value.
+- **Batch warmup is O(N) instead of O(N · files).** `warmup()` now scans the
+  compile cache once into a `hash → present` map.
+- **CLI commands return integer exit codes** (`EXIT_SUCCESS`, `EXIT_ERROR`,
+  `EXIT_USER_INPUT`). `twig:publish` no longer calls `exit()` on internal errors.
+- **`TwigReset`** is now a thin alias of `TwigResetMetrics` (zero-duplication).
+- **Discovery fingerprint** uses `ksort` + `crc32(json_encode(...))` over the
+  per-directory mtime samples instead of XOR (which collapsed identical values).
+- **Compile-index file** is now written without `JSON_PRETTY_PRINT` (smaller
+  on disk; format unchanged for readers).
+
+### Fixed
+- Hash-based template invalidation (`invalidateTemplate`,
+  `invalidateTemplates`) now anchors the match to the file basename, preventing
+  spurious matches against substrings appearing elsewhere in the absolute path.
+- Many `catch (Throwable $e) {}` blocks across `Twig`, `TemplateDiscovery`,
+  `CICacheAdapter`, `TemplateCacheManager` now log at debug level instead of
+  swallowing failures silently.
+- `loadInvalidationsState()` and `loadWarmupSummary()` validate the type of
+  decoded values before assigning them, avoiding fatal errors when the cache
+  contains corrupted or older-shape payloads.
+- `TwigCachePrefixNormalizationTest` no longer emits PHP 8.5 deprecation
+  warnings (`ReflectionProperty::setAccessible()`).
+
+### Security
+- HMAC verification of CI-cached compiled templates closes a defense-in-depth
+  gap where a compromised cache backend (e.g. unauth'd Redis, key collision)
+  could feed arbitrary PHP into `eval()`.
+- Template names supplied to `addPath()`, `invalidateTemplate*()`,
+  `invalidateNamespace()` and the matching CLI commands are now validated.
+  Path-traversal sequences (`..`, leading `/`, null bytes) are rejected with
+  a clear error before reaching filesystem operations.
 
 ## [3.1.1] - 2025-09-22
 ### Changed
