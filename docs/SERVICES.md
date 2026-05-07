@@ -1,6 +1,26 @@
-# Modular Services Guide (v3.0.0)
+# Modular Services Guide
 
-Version 3.0.0 introduces a modular internal architecture. The public facade API (render, display, registerFunction, registerFilter, warmup, invalidate*, listTemplates, etc.) remains backward compatible. This document explains each internal service so advanced users can extend, debug, or instrument the integration without diving into a monolithic class.
+Version 3.0.0 introduced a modular internal architecture; the audit pass on
+top of v3.x extended it with contracts, validators, a render profiler and a
+PSR-3 logger bridge. The public facade API (render, display, registerFunction,
+registerFilter, warmup, invalidate*, listTemplates, etc.) remains backward
+compatible. This document explains each internal service so advanced users
+can extend, debug, or instrument the integration without diving into a
+monolithic class.
+
+## Contracts
+
+Every long-lived service implements a contract from
+`Daycry\Twig\Contracts\`. New code (test doubles, alternative
+implementations, framework adapters) should depend on the interface, not the
+concrete class.
+
+| Interface | Implemented by |
+|-----------|----------------|
+| `DiscoveryInterface` | `TemplateDiscovery` |
+| `CacheManagerInterface` | `TemplateCacheManager` |
+| `InvalidatorInterface` | `TemplateInvalidator` |
+| `DynamicRegistryInterface` | `DynamicRegistry` |
 
 ## Overview
 
@@ -10,6 +30,13 @@ Version 3.0.0 introduces a modular internal architecture. The public facade API 
 | `TemplateCacheManager` | Persist/read compile index (`compile-index.json`) and track compiled templates in memory | Warmup, Invalidation, Listing | Know what is already compiled and skip redundant work |
 | `DynamicRegistry` | Runtime registration & unregistration of functions and filters | `Twig` facade (environment bootstrap) | Modify Twig behavior without reconstructing the facade or losing queued items |
 | `TemplateInvalidator` | Invalidate compiled templates (single/batch/namespace) efficiently | Discovery, CacheManager | Unified, optimized cache cleanup logic |
+| `CICacheAdapter` | Twig `Cache\CacheInterface` adapter that stores compiled templates in the configured CI cache handler (Redis/Memcached/etc.) | `Twig\Environment`, `service('cache')` | HMAC-signed payloads protect `eval()` against a compromised cache |
+| `RenderProfiler` | Aggregate per-template render timings (count / total / avg / max ms) | `Twig` facade render path | Identify slow templates without third-party profilers |
+| `TwigLogger` | Bridge between this library and either an injected PSR-3 logger or `log_message()` | All services | Allow monolog/syslog wiring without forcing the dependency |
+| `TemplateNameValidator` | Reject path-traversal, null bytes and out-of-charset names before any filesystem operation | Public APIs and CLI commands | Defense in depth against accidental or malicious inputs |
+| `PersistenceDecoder` | Strict JSON decoder with optional schema validation | All persistence load paths | Tampered or wrong-shape payloads return `null` instead of crashing |
+| `CapabilitiesProfile` | Readonly value object resolving the Lean/Full matrix from `Config\Twig` | `Twig::initialize()` | Capability resolution is testable without spinning up the facade |
+| `AbstractTwigCommand` | Shared scaffolding for the 11 CLI commands (group, service resolution, flag parsing, JSON output) | `twig:*` commands | Eliminates copy-paste; gives every command consistent exit codes |
 
 ## 1. TemplateDiscovery
 
@@ -43,7 +70,10 @@ fingerprint = sha1(json_encode([
     }
 ]))
 ```
-`sampled_mtime_hash` XORs root directory mtimes (depth now fixed/shallow after simplification; previous configurable depth removed).
+`sampled_mtime_hash` collects each visited directory's mtime into a sorted
+map (`ksort`) and returns `crc32(json_encode($map))`. The previous
+implementation XOR'd mtimes, which collapsed identical values into the same
+fingerprint; the current variant is order-independent and stable.
 
 ### 1.3 Performance Characteristics
 | Mode | Cost | When |
@@ -171,19 +201,150 @@ CI backend (key-value) reduces all operations to O(N) deletes (no directory scan
 ### 4.4 Safety Considerations
 Compiled filename strategy relies on md5 of logical filename + extension substring match. Probability of false positive extremely low for typical directory sizes; any collision would only over-delete extra compiled classes (safe fallback: recompilation).
 
+## 5. CICacheAdapter
+
+Location: `Daycry\Twig\Cache\CICacheAdapter`
+
+Implements `Twig\Cache\CacheInterface`. Active whenever
+`service('cache')` returns anything other than `FileHandler`. The adapter
+serializes compiled PHP code into the CI cache backend (Redis/Memcached/…)
+and signs it with HMAC-SHA256.
+
+Payload shape (JSON):
+```jsonc
+{ "t": <timestamp>, "c": "<php code>", "s": "<hex hmac>" }
+```
+
+`load()` re-computes the HMAC over `c` before `eval()`. If the signature is
+missing or invalid (legacy entry, tampered cache, key mismatch) the entry
+is dropped — `event=twig.cache.adapter.signature_invalid` is logged at
+warning level, the key is best-effort deleted so the next render
+recompiles, and the call returns without executing PHP.
+
+The HMAC key derives from `Config\Encryption::$key` when set; otherwise
+it falls back to a stable per-install value (`hash('sha256', WRITEPATH . APPPATH)`)
+that protects against accidental cross-environment reuse. For real
+adversarial protection set the framework's encryption key.
+
+## 6. RenderProfiler
+
+Location: `Daycry\Twig\Profile\RenderProfiler`
+
+Records per-template render timings: `count`, `total_ms`, `avg_ms`,
+`max_ms`. Activated automatically when `extendedDiagnostics` is on (default
+in the full profile). Skipped entirely when the capability is off, so
+templates pay nothing beyond a boolean check.
+
+Bounded memory: when the number of distinct templates exceeds
+`templateCap` (default 200, configurable in the constructor) further entries
+are bucketed under a synthetic `__overflow__` key — long-lived workers
+cannot grow the table unbounded.
+
+API surface:
+- `record(string $template, float $elapsedSeconds): void`
+- `snapshot(): array<string, array{count,total_ms,avg_ms,max_ms}>`
+- `topByTotal(int $limit = 10): list<array{template,...}>`
+- `reset(): void`
+
+Output is exposed at:
+```
+$diag['performance']['per_template']
+$diag['performance']['top_templates']
+```
+
+## 7. TwigLogger
+
+Location: `Daycry\Twig\Logging\TwigLogger`
+
+Thin bridge that prefers an injected `Psr\Log\LoggerInterface` and falls
+back to CodeIgniter's global `log_message()` helper when none is provided.
+Lets applications wire monolog/syslog/etc. without forcing PSR-3 as a
+hard dependency on the rest of the codebase.
+
+Wired through the facade:
+```php
+$twig = new Twig($config, $psr3Logger);   // optional second arg
+$twig->setLogger($otherLogger);            // replace at runtime
+$twig->setLogger(null);                    // back to log_message()
+$twig->getLogger();                        // null if using fallback
+```
+
+Internally `Twig::logSwallowed($eventSuffix, $exception)` routes through
+this bridge, replacing the previous `catch (Throwable) {}` blocks that
+silently dropped persistence failures.
+
+## 8. Validators (Support layer)
+
+Location: `Daycry\Twig\Support\TemplateNameValidator`,
+`Daycry\Twig\Support\PersistenceDecoder`.
+
+`TemplateNameValidator::assertValid()` is the gatekeeper for every public
+API that touches the filesystem (`addPath`, `invalidateTemplate*`,
+`invalidateNamespace`, the matching CLI commands). It rejects:
+- empty / whitespace-only names,
+- null bytes,
+- `..` segments and leading `/` or `\`,
+- characters outside `[a-zA-Z0-9_\-./]` plus an optional leading `@`.
+
+`assertValidNamespace()` accepts both `@admin` and `admin` and returns the
+canonical form. `filterValid()` filters a list and routes invalid entries
+to an optional callback (used by `invalidateTemplates()` to log skips).
+
+`PersistenceDecoder::decode($json)` returns `null` for missing/empty/non-
+array roots. `decodeWithSchema($json, $schema)` additionally enforces a
+minimal type schema (`'int'|'string'|'bool'|'array'|'float'|'null'` with
+`?` prefix for optional). Used wherever the library reloads its own JSON
+artifacts so a tampered or older-shape payload becomes a no-op instead of
+a fatal error.
+
+## 9. CapabilitiesProfile
+
+Location: `Daycry\Twig\Config\CapabilitiesProfile`
+
+Readonly value object built from `Config\Twig` via
+`CapabilitiesProfile::fromConfig($config)`. Encapsulates the lean/full
+matrix plus the five nullable overrides (`enableDiscoverySnapshot`,
+`enableWarmupSummary`, …). Resolution rules are now testable in isolation;
+the facade just calls `fromConfig()->toArray()` and keeps the legacy array
+shape consumed by the rest of the codebase.
+
+## 10. AbstractTwigCommand
+
+Location: `Daycry\Twig\Commands\AbstractTwigCommand`
+
+Common base for every `twig:*` CLI command. Provides:
+- `protected $group = 'Twig'` (declared once instead of 11 times).
+- `twig(): ?Twig` — resolves the service with a clean failure path
+  (returns `null` after emitting a CLI error so subclasses can
+  `return EXIT_ERROR`).
+- `positional(array $params): list<string>` — drops `--*` flags.
+- `flag(string $name, array $params): bool` — checks both inline and
+  `CLI::getOption()` forms.
+- `writeJson(bool $ok, mixed $data, ?string $error): int` — uniform
+  `{ ok, data, error }` payload returning the matching exit code.
+
+Built-in subclasses: `TwigPublish`, `TwigClearCache`, `TwigInvalidate`,
+`TwigBatchInvalidate`, `TwigWarmup`, `TwigWarmupStatus`, `TwigList`,
+`TwigStats`, `TwigDiagnostics`, `TwigResetMetrics` (with `TwigReset` as a
+thin alias), `TwigLint`, `TwigDoctor`.
+
 ## Lifecycle (Render / Warmup / Invalidate)
 
 1. `render()` → Lazy-create Environment → apply static + queued dynamic functions/filters → render (compilation occurs if not already cached) → mark compiled.
 2. `warmup([...])` → Ensure compile index loaded → `twig->load()` each logical template → mark newly compiled → persist index if changed.
 3. `invalidateTemplate(s)/invalidateNamespace()` → Determine affected compiled files → delete → update `TemplateCacheManager` set → persist index if changed → optionally reinitialize environment.
 
-### 5. Performance Instrumentation
-`Twig::getDiagnostics()` exposes:
+### Performance Instrumentation
+`Twig::getDiagnostics()` exposes (full schema in
+`docs/DIAGNOSTICS_REFERENCE.md`):
+
 | Key | Meaning |
 |-----|---------|
 | `renders` | Total successful render calls this request lifecycle |
 | `performance.total_render_time_ms` | Sum of measured render durations (wall clock) |
 | `performance.avg_render_time_ms` | Average per render (total / renders) |
+| `performance.per_template` | (extendedDiagnostics) `{ template => { count, total_ms, avg_ms, max_ms } }` from `RenderProfiler` |
+| `performance.top_templates` | (extendedDiagnostics) Top 10 templates by `total_ms` |
 | `cache.compiled_templates` | Count of logical templates marked compiled (from index) |
 | `discovery.hits/misses` | Discovery cache reuse vs scans |
 | `discovery.cache_source` | `scan` / `persisted` / `persisted-preload` / `apcu` |

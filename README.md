@@ -21,6 +21,55 @@ Twig uses a syntax similar to the Django and Jinja template languages which insp
 [![GitHub stars](https://img.shields.io/github/stars/daycry/twig?style=social)](https://github.com/daycry/twig/stargazers)
 [![License](https://img.shields.io/github/license/daycry/twig)](https://github.com/daycry/twig/blob/master/LICENSE)
 
+## Requirements
+
+* **PHP ≥ 8.2** (uses enums, readonly properties, intersection types).
+* **CodeIgniter 4.7+** (`codeigniter4/framework: ^4.7`).
+* **Twig 3.x** (`twig/twig: ^3.1.1`).
+
+The CI matrix runs on PHP 8.2, 8.3, 8.4 and 8.5.
+
+## What's new (Unreleased)
+
+Audit follow-ups on top of v3.x — backwards-compatible:
+
+* **Security**
+    * Compiled templates served through the CI cache backend are now signed
+      with HMAC-SHA256 and verified before `eval()`. A compromised cache can
+      no longer feed arbitrary PHP into the host process.
+    * Public APIs that touch the filesystem (`addPath`, `invalidateTemplate*`,
+      `invalidateNamespace`, matching CLI commands) reject path traversal,
+      null bytes and out-of-charset names through `TemplateNameValidator`.
+    * Persisted JSON (compile index, warmup summary, invalidations,
+      discovery snapshot) is decoded through `PersistenceDecoder` with type
+      validation; tampered or wrong-shape payloads are dropped instead of
+      crashing.
+* **Operational tooling**
+    * `php spark twig:lint` validates Twig syntax without rendering — safe in
+      CI/CD pipelines, returns non-zero on the first error, supports `--json`.
+    * `php spark twig:doctor` runs a health check (paths, cache writability,
+      APCu, reconstructed indexes, Twig version) and exits non-zero on errors.
+    * Per-template render profiler in `getDiagnostics()['performance']`
+      exposes `per_template` and `top_templates` (count / total / avg / max ms).
+    * Optional **PSR-3 logger** injection via `new Twig($config, $logger)`
+      or `$twig->setLogger($logger)`. Falls back to `log_message()` when unset.
+    * All CLI commands now return integer exit codes (`EXIT_SUCCESS`,
+      `EXIT_USER_INPUT`, `EXIT_ERROR`).
+    * New helpers: `twig_render()`, `twig_display()`, `twig_capture()`.
+* **Internal**
+    * `Daycry\Twig\Contracts\` — service interfaces (Discovery, CacheManager,
+      Invalidator, DynamicRegistry) for mocking and alternative
+      implementations.
+    * `Daycry\Twig\Constants\` — `TwigEvent`, `TwigCacheKey`, `CacheSource`
+      enums replacing magic strings.
+    * `Daycry\Twig\Config\CapabilitiesProfile` — readonly value object that
+      resolves the lean/full matrix (lifted out of the facade).
+    * `AbstractTwigCommand` consolidates the shared scaffolding of the 11
+      CLI commands.
+
+See `CHANGELOG.md` for the full diff and `docs/TROUBLESHOOTING.md` for
+common-case investigations.
+
 ## v3.0.0 Highlights
 
 Major architectural refactor (internal) with backward‑compatible public API:
@@ -61,23 +110,24 @@ Runtime features are governed by a profile (Full vs Lean) plus nullable override
 | Dynamic Metrics (function/filter counts) | ON | OFF | Inherit profile | Force ON | Force OFF |
 | Extended Diagnostics (names lists, static counts) | ON | OFF | Inherit profile | Force ON | Force OFF |
 
-`null` significa “hereda el perfil base”. Establecer explícitamente `true` / `false` domina siempre al modo (Full / Lean).
+`null` means "inherit from the profile". Setting an explicit `true` /
+`false` always wins over the Full/Lean default.
 
 ### Automatic Cache Backend Detection
 
-El sistema siempre invoca `service('cache')`:
-* Si el handler es FileHandler (clase contiene `File`) => modo `filesystem` usando la ruta `cachePath` (por defecto `WRITEPATH/cache/twig`).
-* Cualquier otro handler => modo `service` (se envuelve en `CICacheAdapter` para compilados Twig e índices).
+The library always calls `service('cache')`:
+* If the handler is a `FileHandler` (class name contains `File`) ⇒ `filesystem` mode using `cachePath` (default `WRITEPATH/cache/twig`).
+* Any other handler ⇒ `service` mode (wrapped in `CICacheAdapter` for compiled templates and indexes; payloads are HMAC-signed before `eval()`).
 
-Diagnóstico (`getDiagnostics()['cache']`):
+Diagnostics (`getDiagnostics()['cache']`):
 ```jsonc
 {
     "enabled": true,
-    "path": "/var/www/app/writable/cache/twig",   // null cuando mode=service
+    "path": "/var/www/app/writable/cache/twig",   // null when mode=service
     "mode": "filesystem" | "service",
-    "service_class": "CodeIgniter\\Cache\\Handlers\\RedisHandler", // sólo en service
-    "prefix": "twig_",    // derivado de Config\Cache::$prefix + 'twig_'
-    "ttl": 0,              // 0 = sin expiración (habitual para compilados)
+    "service_class": "CodeIgniter\\Cache\\Handlers\\RedisHandler", // service mode only
+    "prefix": "twig_",    // derived from Config\Cache::$prefix
+    "ttl": 0,              // 0 = no expiry (typical for compiled artifacts)
     "compiled_templates": 42,
     "reconstructed_index": false
 }
@@ -103,9 +153,11 @@ Applies uniformly to compiled templates, compile index, discovery snapshot, warm
 Diagnostics expose the resolved value at `diagnostics['cache']['prefix']`.
 
 ### Persistence Medium Map (`diagnostics['persistence']`)
-Claves posibles: `compile_index`, `discovery_snapshot`, `warmup`, `invalidations`.
+Possible keys: `compile_index`, `discovery_snapshot`, `warmup`,
+`invalidations`.
 
-Valor: `{ "medium": "file" | "ci" }` donde `ci` representa uso de cache service (cualquier handler no-file). Ejemplo:
+Value: `{ "medium": "file" | "ci" }` where `ci` indicates the cache service
+backend (any non-`File` handler). Example:
 ```json
 "persistence": {
     "compile_index": { "medium": "ci" },
@@ -116,60 +168,75 @@ Valor: `{ "medium": "file" | "ci" }` donde `ci` representa uso de cache service 
 ```
 
 ### Reconstructed Index
-Si tras leer el índice (`compile-index.json` o clave remota) la lista está vacía pero se detectan ficheros PHP compilados (upgrade / copia manual), se crea un índice sintético con nombres `unknown_N`. Campo `reconstructed_index = true` advierte de esta situación; haz un warmup para regenerar un índice “real”.
+If the compile index (`compile-index.json` or remote key) loads empty but
+compiled PHP files are detected on disk (upgrade or manual copy), a
+synthetic index is built with `unknown_N` names. The
+`reconstructed_index = true` flag warns of this state — run a warmup to
+regenerate a real index.
 
 ### Lean vs Full Diagnostics Output
-Lean elimina secciones completas (no aparecen las claves) para minimizar payload. Ejemplo (lean + sin overrides) sólo contiene: `renders`, `last_render_view`, `environment_resets`, `cache`, `performance`, `capabilities`, `persistence` (y discovery si forzado). Cualquier override `true` reintroduce su sección concreta.
+Lean Mode drops entire sections (the keys disappear) to keep the payload
+small. A lean instance with no overrides only exposes: `renders`,
+`last_render_view`, `environment_resets`, `cache`, `performance`,
+`capabilities`, `persistence` (plus `discovery` when forced). Setting any
+override to `true` re-introduces just that section.
 
 ### Debug Toolbar Tuning
 
-Para instalaciones grandes o páginas con mucho JavaScript, el panel de Twig puede añadir latencia si renderiza todas las secciones (discovery, dynamics, templates) en cada request. Se proveen flags para reducir el trabajo de renderizado directamente (no existe ya modo diferido / fetch asincrónico; fue retirado por simplicidad y evitar recursiones de rutas).
+For large installs or pages with heavy JavaScript, the Twig toolbar panel
+can add latency if it renders every section (discovery, dynamics, templates)
+on each request. The flags below trim the rendered output directly — there
+is no longer a deferred / async-fetch mode (it was removed to avoid route
+recursion).
 
-Flags de configuración (en `Config\\Twig`):
+Config flags (on `Config\Twig`):
 
-| Flag | Default | Efecto |
+| Flag | Default | Effect |
 |------|---------|--------|
-| `toolbarMinimal` | false | Si `true` sólo Core + Cache + Performance; omite Discovery, Warmup, Invalidations, Dynamics, Templates, Capabilities, Persistence. |
-| `toolbarShowTemplates` | true | Muestra/oculta la tabla de plantillas. Ignorado si `toolbarMinimal=true`. |
-| `toolbarMaxTemplates` | 50 | Límite de filas en la tabla de plantillas. |
-| `toolbarShowCapabilities` | true | Muestra sección de capabilities. Ignorado si minimal. |
-| `toolbarShowPersistence` | true | Muestra mediums de persistencia. Ignorado si minimal. |
+| `toolbarMinimal` | `false` | When `true` only Core + Cache + Performance; skips Discovery, Warmup, Invalidations, Dynamics, Templates, Capabilities, Persistence. |
+| `toolbarShowTemplates` | `true` | Show / hide the templates table. Ignored when `toolbarMinimal=true`. |
+| `toolbarMaxTemplates` | `50` | Hard cap on rows in the templates table. |
+| `toolbarShowCapabilities` | `true` | Show the capabilities section. Ignored when minimal. |
+| `toolbarShowPersistence` | `true` | Show the persistence-medium section. Ignored when minimal. |
 
-Ejemplo para máximo rendimiento en desarrollo (vista muy ligera):
+Maximum-performance dev view:
 ```php
-$config->toolbarMinimal = true; // Sólo métricas esenciales
+$config->toolbarMinimal = true; // only essential metrics
 ```
 
-Perfil intermedio sin tabla de plantillas pero con capabilities y persistence:
+Intermediate profile without the templates table but keeping capabilities
+and persistence:
 ```php
 $config->toolbarMinimal = false;
 $config->toolbarShowTemplates = false;
 ```
 
-Estrategia sugerida:
-1. Empieza con `toolbarMinimal=true` si sólo depuras conteos y cache.
-2. Añade secciones puntualmente: desactiva minimal y activa sólo lo que necesitas (`toolbarShowTemplates=false` para omitir la tabla, reduce `toolbarMaxTemplates`).
-3. Usa Lean Mode para reducir también el tamaño de la estructura JSON interna si consumes diagnostics externamente.
+Suggested strategy:
+1. Start with `toolbarMinimal=true` if you only debug counts and cache.
+2. Add sections one at a time: turn minimal off, then disable only what
+   you don't need (`toolbarShowTemplates=false`, lower `toolbarMaxTemplates`).
+3. Use Lean Mode to also shrink the JSON structure when consuming
+   diagnostics externally.
 
-Notas:
-- Todas las secciones se renderizan inline; no hay peticiones secundarias.
-- Sin dependencias de JavaScript para cargar contenido dinámico del panel.
-- Las optimizaciones se centran en no construir HTML innecesario.
+Notes:
+- All sections render inline; there are no secondary requests.
+- No JavaScript dependency for loading dynamic panel content.
+- The optimisations target avoiding unnecessary HTML construction.
 
 
-### Ejemplos Rápidos
-Forzar snapshot en Lean:
+### Quick Examples
+Force discovery snapshot in Lean Mode:
 ```php
 $config->leanMode = true;
-$config->enableDiscoverySnapshot = true; // sólo snapshot; warmupSummary, invalidations, metrics siguen OFF
+$config->enableDiscoverySnapshot = true; // snapshot only; warmupSummary, invalidations, metrics stay OFF
 ```
 
-Listar plantillas con estado de compilación:
+List templates with compiled status:
 ```php
 $twig->listTemplates(true); // [['name'=>'welcome','compiled'=>true], ...]
 ```
 
-Warmup y ver resumen:
+Warm up and inspect the summary:
 ```php
 $twig->warmup(['welcome']);
 print_r($twig->getDiagnostics()['warmup']);
@@ -234,20 +301,25 @@ $twig->display( 'file.html', [] );
 
 ## Usage as a Helper
 
-In your BaseController - $helpers array, add an element with your helper filename.
+In your BaseController - `$helpers` array, add an element with your helper filename.
 
 ```php
 protected $helpers = [ 'twig_helper' ];
-
 ```
 
-And then you can use the helper
+The helper provides a few convenience wrappers around the shared service:
 
 ```php
-
+// Same instance as Services::twig()
 $twig = twig_instance();
-$twig->display( 'file.html', [] );
+$twig->display('file.html', []);
 
+// Render-and-return / render-and-echo without resolving the service by hand
+$html = twig_render('emails/welcome', ['name' => 'Daycry']);
+twig_display('layout/main', ['title' => 'Home']);
+
+// Capture stdout from a callable as a string
+$captured = twig_capture(static fn () => twig_display('partials/sidebar'));
 ```
 
 ## Add Globals
@@ -327,8 +399,13 @@ php spark twig:clear-cache --reinit
 See full details, key layout, and troubleshooting in `docs/CACHING.md`.
 
 ### Further Reading
-- `docs/SERVICES.md` – Modular internal services (Discovery, CacheManager, DynamicRegistry, Invalidator)
-- `docs/PERFORMANCE.md` – Warmup strategy, discovery tuning, invalidation efficiency, diagnostics interpretation
+- `CHANGELOG.md` — release-by-release diff (Keep-a-Changelog format).
+- `CONTRIBUTING.md` — local quality gates and contribution conventions.
+- `docs/SERVICES.md` — modular internal services (Discovery, CacheManager, DynamicRegistry, Invalidator) plus contracts, profiler, logger bridge, validators.
+- `docs/PERFORMANCE.md` — warmup strategy, discovery tuning, batch optimisation, render profiler.
+- `docs/CACHING.md` — multi-layer caching architecture, key layout, lean-mode matrix.
+- `docs/DIAGNOSTICS_REFERENCE.md` — full schema for every key in `getDiagnostics()`.
+- `docs/TROUBLESHOOTING.md` — common-case investigations (no templates discovered, cache never cleared, HMAC drops, APCu warnings, exit-code-zero-on-failure, etc.).
 
 ### Lean Mode (Low-Overhead Profile)
 
@@ -541,33 +618,71 @@ Warmup uses a heuristic hash check (md5 of logical name) to decide if a template
 
 ### Logging
 
-All logging now delegates entirely to CodeIgniter's native `log_message()` helper. No internal logger instance or `setLogger()` method exists anymore.
+By default the library writes structured `event=twig.* key=value ...` entries
+through CodeIgniter's `log_message()` helper. No additional configuration is
+required; verbosity is controlled by `app/Config/Logger.php`.
 
-Log entries follow a normalized `event=<name> key=value ...` pattern for easier machine parsing. Representative events (levels vary: debug/info/error):
-- `twig.functions.start`, `twig.functions.ready`
+If you need monolog/syslog/etc., inject a PSR-3 logger via the constructor or
+`setLogger()`:
+
+```php
+use Psr\Log\LoggerInterface;
+
+/** @var LoggerInterface $logger */
+$twig = new \Daycry\Twig\Twig($config, $logger);
+// or later:
+$twig->setLogger($logger);
+$twig->setLogger(null); // restore the log_message() fallback
+```
+
+Representative events (levels vary: debug/info/error):
 - `twig.function.queued`, `twig.function.registered`, `twig.function.unregistered`
 - `twig.filter.queued`, `twig.filter.registered`, `twig.filter.unregistered`
-- `twig.extension.queued`, `twig.extension.registered`, `twig.extension.queued_recreate`, `twig.extension.unregistered`
+- `twig.extension.queued`, `twig.extension.registered`, `twig.extension.unregistered`
 - `twig.cache.enabled`, `twig.cache.disabled`, `twig.cache.cleared`
+- `twig.cache.adapter.signature_invalid` (HMAC verification failed — entry dropped)
 - `twig.template.invalidated`, `twig.templates.invalidated`, `twig.namespace.invalidated`
 - `twig.warmup.compiled`, `twig.warmup.error`
-- `twig.loader.replaced`, `twig.reset`
+- `twig.loader.replaced`, `twig.reset`, `twig.path.added`
+- `twig.discovery.*` (snapshot persistence / migration / APCu)
+- `twig.invalidations.*` (state load/save errors)
+- `twig.warmup.summary.*` (state load/save errors)
 
-Control verbosity via your global `app/Config/Logger.php`. No additional configuration is required inside `Twig`.
+Persistence catches that previously swallowed exceptions silently now log at
+debug level (`event=twig.<area>.error msg=...`).
 
-Breaking change: previous ad-hoc message formats were replaced; if you had log parsers, update them to consume the new key=value style.
+Public event identifiers are also available as a string-backed enum for
+typed call sites:
+
+```php
+use Daycry\Twig\Constants\TwigEvent;
+
+event(TwigEvent::WarmupAfter->value, $payload);
+```
+
+Breaking change vs ≤ 0.2.x: ad-hoc message formats were replaced by the
+`event=...` shape; update any log parser that grepped for the old text.
 
 ### CLI Commands Overview
+
+Every command extends `AbstractTwigCommand` and returns proper integer exit
+codes (`EXIT_SUCCESS`, `EXIT_USER_INPUT`, `EXIT_ERROR`) so failures actually
+fail in CI/CD pipelines.
 
 | Command | Description | Common Options / Notes |
 |---------|-------------|------------------------|
 | `php spark twig:publish` | Publish the config file to `app/Config/Twig.php`. | Run once after install. |
 | `php spark twig:clear-cache` | Delete compiled cache files. | `--reinit` recreate environment after clearing. |
-| `php spark twig:invalidate <template>` | Invalidate a single logical template. | `--reinit` if removed. Name without extension. |
+| `php spark twig:invalidate <template>` | Invalidate a single logical template. | `--reinit` if removed. Name without extension. Validated for path traversal. |
 | `php spark twig:invalidate:batch <t1> <t2> ...` | Invalidate multiple logical templates. | `--reinit` if any removed. |
-| `php spark twig:warmup` | Precompile specific templates. | Provide names or use `--all`; `--force` to ignore existing cache. |
-| `php spark twig:list` | List discovered logical templates. | `--status` to include compiled flag. |
+| `php spark twig:warmup` | Precompile specific templates. | Provide names or use `--all`; `--force` to ignore existing cache; `--json` and `--verbose` available. |
+| `php spark twig:warmup:status` | Show last warmup summary (`warmup-summary.json`). | `--json`. |
+| `php spark twig:list` | List discovered logical templates. | `--status` to include compiled flag, `--json`. |
 | `php spark twig:stats` | Show counts & cache information. | Reads compile index and cache directory. |
+| `php spark twig:lint [template]` | Validate Twig syntax without rendering. | If `template` is omitted, every discovered template is linted. `--json`. Non-zero exit on syntax errors. |
+| `php spark twig:doctor` | Health check (paths, cache, APCu, index, version). | `--json`. Non-zero exit when any check is ERROR-level. |
+| `php spark twig:diagnostics` | Print full `getDiagnostics()` output. | `--json`. |
+| `php spark twig:reset-metrics` (alias `twig:reset`) | Reset diagnostic artifacts (discovery stats, warmup summary, optionally compile index/cache). | `--include-index`, `--include-cache`, `--json`. |
 
 ### Template Listing & Filtering
 
@@ -596,35 +711,17 @@ Discovered logical template names are cached per-process (context hash: loader c
 2. Environment reset (`resetTwig()`)
 This reduces filesystem traversal on repeated listing or namespace invalidation operations.
 
-## Changelog (recent additions)
+## Changelog
 
-Summary of notable enhancements (proposed release 0.3.0):
-- Loader replacement via `withLoader()`
-- Strict variables mode (`$strictVariables` config)
-- Dynamic runtime registration & unregistration: `registerFunction()`, `unregisterFunction()`, `registerFilter()`, `unregisterFilter()`, `registerExtension()`, `unregisterExtension()`
-- Cache utilities: `getCachePath()`, `clearCache()`, runtime toggles `disableCache()`, `enableCache()`, `isCacheEnabled()`
-- Selective, batch, and namespace invalidation: `invalidateTemplate()`, `invalidateTemplates()`, `invalidateNamespace()` + CLI counterparts
-- Warmup & precompilation: `warmup()`, `warmupAll()` with persisted compile index (`compile-index.json`)
-- Listing & status: `listTemplates()` (with namespace/pattern filtering & compiled status)
-- Namespace auto-escape strategy mapping: `setAutoescapeForNamespace()`, `removeAutoescapeForNamespace()`
-- New CLI commands: `twig:invalidate`, `twig:invalidate:batch`, `twig:warmup`, `twig:list`, `twig:stats`, `twig:clear-cache`, `twig:publish`
--- Unified structured logging (key=value)
-- In-process discovery cache for logical template enumeration
+Release-by-release notes live in [`CHANGELOG.md`](CHANGELOG.md). The
+`[Unreleased]` section there mirrors the **What's new** block at the top of
+this file.
 
-## Roadmap / Ideas
+## Common runtime knobs
 
-Potential future exploration:
-- Template dependency graph (track includes/extends for smarter invalidation)
-- Optional metrics hook (expose render times to an external profiler)
-- Pluggable cache backend abstraction (filesystem vs memory)
-- Enhanced auto-escape strategies (contextual by file pattern)
-- Interactive CLI (prompt-driven) for template operations
+A reference of small features that don't deserve a top-level section:
 
-### New Features Documentation
-
-#### Unregister Runtime Additions
-
-Remove previously registered dynamic artifacts:
+#### Unregister runtime additions
 
 ```php
 $twig->unregisterFunction('temp_fn');
@@ -632,21 +729,19 @@ $twig->unregisterFilter('brackets');
 $twig->unregisterExtension(MyExtension::class);
 ```
 
-#### Runtime Cache Toggle
-
-Disable recompilation writing and force non-cached rendering (development convenience):
+#### Runtime cache toggle (development convenience)
 
 ```php
 $twig->disableCache();          // turns off cache (does not delete existing by default)
 $twig->disableCache(true);      // also removes existing compiled files
 $twig->enableCache();           // re-enable with default path
 $twig->enableCache('/custom/path');
-if (!$twig->isCacheEnabled()) { /* ... */ }
+if (! $twig->isCacheEnabled()) { /* ... */ }
 ```
 
-#### Namespace Auto-Escape Mapping
+#### Namespace auto-escape mapping
 
-Set different escaping strategies per Twig namespace (leading `@` omitted when specifying):
+Set different escaping strategies per Twig namespace (leading `@` omitted):
 
 ```php
 $twig->setAutoescapeForNamespace('admin', 'html');
@@ -654,21 +749,27 @@ $twig->setAutoescapeForNamespace('rawmail', false);   // disable escaping
 $twig->removeAutoescapeForNamespace('rawmail');
 ```
 
-#### Persistent Compile Index & Listing
+#### Persistent compile index & listing
 
-Warmup operations store compiled logical names into `compile-index.json` within the cache directory.
+Warmup operations store compiled logical names into `compile-index.json`
+inside the cache directory:
 
 ```php
 $twig->warmup(['welcome']);
 $templates = $twig->listTemplates(true); // [['name' => 'welcome', 'compiled' => true], ...]
 ```
 
-#### New CLI Commands
+#### Render profiler
 
+When `extendedDiagnostics` is on (default in the full profile), every render
+records its wall-clock cost; the aggregate is exposed via diagnostics:
+
+```php
+$diag = $twig->getDiagnostics();
+print_r($diag['performance']['per_template']);
+print_r($diag['performance']['top_templates']); // top 10 by total ms
 ```
-php spark twig:list             # list logical template names
-php spark twig:list --status    # include compiled status (from index)
-php spark twig:stats            # show counts & cache info
-php spark twig:invalidate:batch welcome emails/welcome
-```
+
+A bounded `__overflow__` bucket caps per-template entries to keep memory
+predictable on long-lived workers.
 

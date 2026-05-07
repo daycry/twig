@@ -83,6 +83,16 @@ Cost Model:
 | Unregister | Environment rebuilt next render |
 
 ---
+## 4.1 Batch Warmup Optimisation
+`Twig::warmup($templates)` pre-builds a single `hash → present` map of the
+compiled-template directory before the loop, so each template lookup is
+O(1) instead of triggering a fresh recursive scan. For N templates this
+turns an O(N · files) sequence into O(files + N).
+
+The optimisation is transparent: `--force` still recompiles unconditionally;
+the index is only used to short-circuit "skipped" decisions. On the
+CI cache backend the same logic applies via the adapter's index key.
+
 ## 5. Invalidation Efficiency
 Invalidate only what changed—don’t `clearCache()` globally unless necessary.
 
@@ -110,6 +120,28 @@ Important Keys:
 | `warmup.summary` | Track compile errors early |
 | `invalidations.cumulative_removed` | Sudden spikes may indicate a buggy invalidation loop |
 | `performance.avg_render_time_ms` | Observe trend; large jump => inspect extensions/filters |
+| `performance.per_template[<view>]` | (extendedDiagnostics) Per-template count / total / avg / max ms |
+| `performance.top_templates` | (extendedDiagnostics) Top 10 by total ms — start tuning here |
+
+Full schema in `docs/DIAGNOSTICS_REFERENCE.md`.
+
+### 6.1 Per-template Render Profiler
+When `extendedDiagnostics` is on, `RenderProfiler` records every call into
+`Twig::render()` and aggregates `count / total_ms / avg_ms / max_ms` per
+view. The per-template entries cap out at 200 distinct views (configurable
+in the constructor) and overflow into a synthetic `__overflow__` bucket so
+long-lived workers cannot grow the table unbounded.
+
+Lean Mode disables the profiler entirely (zero overhead). Re-enable it via
+`enableExtendedDiagnostics = true` if you need timings without the rest of
+the extended bundle.
+
+```php
+foreach ($twig->getDiagnostics()['performance']['top_templates'] as $row) {
+    log_message('info', sprintf('twig top template=%s total=%.2fms count=%d',
+        $row['template'], $row['total_ms'], $row['count']));
+}
+```
 
 ---
 ## 7. Benchmarking Workflow
@@ -158,9 +190,16 @@ php spark twig:warmup --all
 
 ---
 ## 11. Extending Performance Monitoring
-- Wrap `Environment::render()` with timing + memory (outside of library).
+- Use `getDiagnostics()['performance']['per_template']` (built-in) before
+  reaching for external tooling — it covers the common "which template is
+  slow?" question without third-party setup.
 - Export diagnostics to Prometheus by mapping counters.
-- Add a cron job to run `twig:diagnostics --json` and feed logs/metrics backend.
+- Add a cron job to run `twig:diagnostics --json` and feed your logs /
+  metrics backend.
+- Run `php spark twig:doctor --json` from your healthcheck endpoint or
+  Kubernetes probe — non-zero exit on cache/path issues.
+- Run `php spark twig:lint --json` in CI to fail builds on broken templates
+  before deployment.
 
 ---
 ## 12. FAQ
