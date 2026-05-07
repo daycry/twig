@@ -25,7 +25,8 @@
     {
         "codeigniter4/devkit": "^1.3",
         "codeigniter4/framework": "^4.7",
-        "rector/rector": "^2"
+        "rector/rector": "^2",
+        "qossmic/deptrac": "^2"
     },
     "minimum-stability": "dev",
     "prefer-stable": true,
