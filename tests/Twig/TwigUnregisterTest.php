@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Twig;
 
 use CodeIgniter\Test\CIUnitTestCase;
@@ -26,7 +28,7 @@ final class TwigUnregisterTest extends CIUnitTestCase
         // Render template via createTemplate to trigger addition
         $twig->getTwig(); // force environment creation
         $html = $twig->createTemplate('{{ temp_fn() }}');
-        $this->assertSame('X', trim($html));
+        $this->assertSame('X', trim((string) $html));
         $this->assertTrue($twig->unregisterFunction('temp_fn'));
         // Re-create environment and ensure function no longer exists
         $twig->getTwig();
@@ -42,7 +44,7 @@ final class TwigUnregisterTest extends CIUnitTestCase
         $twig->registerFilter('brackets', static fn ($s) => '[' . $s . ']');
         $twig->getTwig();
         $out = $twig->createTemplate("{{ 'ok'|brackets }}");
-        $this->assertSame('[ok]', trim($out));
+        $this->assertSame('[ok]', trim((string) $out));
         $this->assertTrue($twig->unregisterFilter('brackets'));
         $twig->getTwig();
         $this->expectException(RuntimeError::class);
@@ -55,7 +57,7 @@ final class TwigUnregisterTest extends CIUnitTestCase
         $cfg->paths = [__DIR__ . '/../_support/Templates'];
         $twig       = new Twig($cfg);
         // use core debug extension dynamically as test (not in default list when production?)
-        $this->assertTrue($twig->registerExtension(StringLoaderExtension::class) instanceof Twig);
+        $this->assertInstanceOf(Twig::class, $twig->registerExtension(StringLoaderExtension::class));
         $twig->getTwig();
         // Now attempt to unregister (should rebuild environment)
         $this->assertTrue($twig->unregisterExtension(StringLoaderExtension::class));

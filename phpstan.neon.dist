@@ -1,5 +1,5 @@
 includes:
-	- phpstan-baseline.php
+	- phpstan-baseline.neon
 parameters:
 	tmpDir: build/phpstan
 	level: 5
@@ -9,8 +9,8 @@ parameters:
 	bootstrapFiles:
 		- vendor/codeigniter4/framework/system/Test/bootstrap.php
 	excludePaths:
-		- src/Config/Routes.php
-		- src/Views/*
+		- src/Config/Routes.php (?)
+		- src/Views/* (?)
 	ignoreErrors:
 	universalObjectCratesClasses:
 		- CodeIgniter\Entity

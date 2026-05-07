@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Twig;
 
 use CodeIgniter\Test\CIUnitTestCase;
@@ -8,7 +10,9 @@ use Daycry\Twig\Twig;
 
 // Logger tests simplified: integration now delegates to global log_message helper.
 
-/** @internal */
+/**
+ * @internal
+ */
 final class TwigLoggerTest extends CIUnitTestCase
 {
     private Twig $twig;

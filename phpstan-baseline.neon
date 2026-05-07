@@ -1,0 +1,277 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 3
+			path: src/Cache/TemplateCacheManager.php
+
+		-
+			message: '#^Property Daycry\\Twig\\Config\\Twig\:\:\$leanMode \(bool\) on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.property
+			count: 1
+			path: src/Config/CapabilitiesProfile.php
+
+		-
+			message: '#^Call to function method_exists\(\) with Daycry\\Twig\\Twig and ''listTemplates'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Debug/Toolbar/Collectors/Twig.php
+
+		-
+			message: '#^Dead catch \- Throwable is never thrown in the try block\.$#'
+			identifier: catch.neverThrown
+			count: 1
+			path: src/Debug/Toolbar/Collectors/Twig.php
+
+		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Support/TemplateNameValidator.php
+
+		-
+			message: '#^Access to an undefined property Daycry\\Twig\\Twig\:\:\$reconstructedIndex\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Twig.php
+
+		-
+			message: '''
+				#^Access to deprecated property \$cacheTtl of class Daycry\\Twig\\Config\\Twig\:
+				TTL is still honored if non\-zero but auto mode typically uses no expiry \(0\)\. Will be simplified later\.$#
+			'''
+			identifier: property.deprecated
+			count: 1
+			path: src/Twig.php
+
+		-
+			message: '#^Call to function method_exists\(\) with \$this\(Daycry\\Twig\\Twig\) and ''loadCompileIndex'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Twig.php
+
+		-
+			message: '#^Call to function method_exists\(\) with Daycry\\Twig\\Cache\\TemplateCacheManager and ''getCompiledTemplates'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Twig.php
+
+		-
+			message: '#^Call to function method_exists\(\) with Daycry\\Twig\\Discovery\\TemplateDiscovery and ''configure'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Twig.php
+
+		-
+			message: '#^Call to function method_exists\(\) with Daycry\\Twig\\Discovery\\TemplateDiscovery and ''getPersistenceMedium'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 2
+			path: src/Twig.php
+
+		-
+			message: '#^Call to function method_exists\(\) with Daycry\\Twig\\Discovery\\TemplateDiscovery and ''useCiCache'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Twig.php
+
+		-
+			message: '#^Call to function method_exists\(\) with Daycry\\Twig\\Registry\\DynamicRegistry and ''listFilterNames'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Twig.php
+
+		-
+			message: '#^Call to function method_exists\(\) with Daycry\\Twig\\Registry\\DynamicRegistry and ''listFunctionNames'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Twig.php
+
+		-
+			message: '#^Call to function method_exists\(\) with Twig\\Extension\\EscaperExtension and ''setDefaultStrategy'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Twig.php
+
+		-
+			message: '#^Class Daycry\\Twig\\Cache\\TemplateCacheManager constructor invoked with 1 parameter, 0 required\.$#'
+			identifier: arguments.count
+			count: 2
+			path: src/Twig.php
+
+		-
+			message: '#^If condition is always true\.$#'
+			identifier: if.alwaysTrue
+			count: 9
+			path: src/Twig.php
+
+		-
+			message: '#^Left side of && is always true\.$#'
+			identifier: booleanAnd.leftAlwaysTrue
+			count: 2
+			path: src/Twig.php
+
+		-
+			message: '#^Property Daycry\\Twig\\Config\\Twig\:\:\$cachePath \(string\) on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.property
+			count: 1
+			path: src/Twig.php
+
+		-
+			message: '#^Property Daycry\\Twig\\Config\\Twig\:\:\$cacheTtl \(int\) on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.property
+			count: 1
+			path: src/Twig.php
+
+		-
+			message: '#^Property Daycry\\Twig\\Config\\Twig\:\:\$extension \(string\) in isset\(\) is not nullable\.$#'
+			identifier: isset.property
+			count: 1
+			path: src/Twig.php
+
+		-
+			message: '#^Property Daycry\\Twig\\Config\\Twig\:\:\$functions_asis \(list\<string\>\) in isset\(\) is not nullable\.$#'
+			identifier: isset.property
+			count: 1
+			path: src/Twig.php
+
+		-
+			message: '#^Property Daycry\\Twig\\Config\\Twig\:\:\$functions_safe \(list\<string\>\) in isset\(\) is not nullable\.$#'
+			identifier: isset.property
+			count: 1
+			path: src/Twig.php
+
+		-
+			message: '#^Property Daycry\\Twig\\Config\\Twig\:\:\$paths \(list\<array\<string, string\>\|string\>\) in isset\(\) is not nullable\.$#'
+			identifier: isset.property
+			count: 1
+			path: src/Twig.php
+
+		-
+			message: '#^Property Daycry\\Twig\\Config\\Twig\:\:\$saveData \(bool\) in isset\(\) is not nullable\.$#'
+			identifier: isset.property
+			count: 1
+			path: src/Twig.php
+
+		-
+			message: '#^Property Daycry\\Twig\\Config\\Twig\:\:\$strictVariables \(bool\) on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.property
+			count: 1
+			path: src/Twig.php
+
+		-
+			message: '#^Property Daycry\\Twig\\Twig\:\:\$cacheTtl \(int\) on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.property
+			count: 5
+			path: src/Twig.php
+
+		-
+			message: '#^Ternary operator condition is always true\.$#'
+			identifier: ternary.alwaysTrue
+			count: 1
+			path: src/Twig.php
+
+		-
+			message: '#^Call to function method_exists\(\) with Daycry\\Twig\\Twig and ''getDiagnostics'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: tests/Collectors/TwigTest.php
+
+		-
+			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertInstanceOf\(\) with ''Daycry\\\\Twig\\\\Debug\\\\Toolbar\\\\Collectors\\\\Twig'' and Daycry\\Twig\\Debug\\Toolbar\\Collectors\\Twig will always evaluate to true\.$#'
+			identifier: method.alreadyNarrowedType
+			count: 1
+			path: tests/Collectors/TwigTest.php
+
+		-
+			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertIsArray\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: method.alreadyNarrowedType
+			count: 1
+			path: tests/Collectors/TwigTest.php
+
+		-
+			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertIsString\(\) with string will always evaluate to true\.$#'
+			identifier: method.alreadyNarrowedType
+			count: 1
+			path: tests/Collectors/TwigTest.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: tests/Collectors/TwigTest.php
+
+		-
+			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertSame\(\) with array\{''discoverySnapshot'', ''warmupSummary'', ''invalidationHistory'', ''dynamicMetrics'', ''extendedDiagnostics''\} and array\{''discoverySnapshot'', ''warmupSummary'', ''invalidationHistory'', ''dynamicMetrics'', ''extendedDiagnostics''\} will always evaluate to true\.$#'
+			identifier: method.alreadyNarrowedType
+			count: 1
+			path: tests/Twig/CapabilitiesProfileTest.php
+
+		-
+			message: '''
+				#^Access to deprecated property \$cacheTtl of class Daycry\\Twig\\Config\\Twig\:
+				TTL is still honored if non\-zero but auto mode typically uses no expiry \(0\)\. Will be simplified later\.$#
+			'''
+			identifier: property.deprecated
+			count: 1
+			path: tests/Twig/TwigCiPersistenceTest.php
+
+		-
+			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertSame\(\) with ''Version B'' and ''Version A'' will always evaluate to false\.$#'
+			identifier: method.impossibleType
+			count: 1
+			path: tests/Twig/TwigInvalidateTemplateReinitTest.php
+
+		-
+			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertIsInt\(\) with int will always evaluate to true\.$#'
+			identifier: method.alreadyNarrowedType
+			count: 1
+			path: tests/Twig/TwigLoggerTest.php
+
+		-
+			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertTrue\(\) with true will always evaluate to true\.$#'
+			identifier: method.alreadyNarrowedType
+			count: 2
+			path: tests/Twig/TwigLoggerTest.php
+
+		-
+			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertInstanceOf\(\) with ''Twig\\\\Environment'' and Twig\\Environment will always evaluate to true\.$#'
+			identifier: method.alreadyNarrowedType
+			count: 5
+			path: tests/Twig/TwigTest.php
+
+		-
+			message: '#^Property Daycry\\Twig\\Config\\Twig\:\:\$filters \(array\<string, array\<string\>\|string\>\) does not accept array\<string, Closure\>\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: tests/Twig/TwigTest.php
+
+		-
+			message: '#^Call to an undefined static method Config\\Services\:\:twig\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: tests/Twig/TwigTraitTest.php
+
+		-
+			message: '#^Property Daycry\\Twig\\Config\\Twig\:\:\$filters \(array\<string, array\<string\>\|string\>\) does not accept array\<string, Closure\>\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: tests/Twig/TwigTraitTest.php
+
+		-
+			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertInstanceOf\(\) with ''Daycry\\\\Twig\\\\Twig'' and Daycry\\Twig\\Twig will always evaluate to true\.$#'
+			identifier: method.alreadyNarrowedType
+			count: 1
+			path: tests/Twig/TwigUnregisterTest.php
+
+		-
+			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertTrue\(\) with true will always evaluate to true\.$#'
+			identifier: method.alreadyNarrowedType
+			count: 1
+			path: tests/Twig/TwigUnregisterTest.php
+
+		-
+			message: '#^Trait Tests\\Support\\Traits\\TwigTestSetup is used zero times and is not analysed\.$#'
+			identifier: trait.unused
+			count: 1
+			path: tests/_support/Traits/TwigTestSetup.php

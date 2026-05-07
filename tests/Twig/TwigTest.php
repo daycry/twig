@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Twig;
 
 use CodeIgniter\Test\CIUnitTestCase;
@@ -28,7 +30,7 @@ final class TwigTest extends CIUnitTestCase
         $this->config                 = new TwigConfig();
         $this->config->paths          = ['./tests/_support/Templates/'];
         $this->config->functions_asis = ['md5'];
-        $this->config->filters        = ['customFilter' => [CustomFilter::class, 'run']];
+        $this->config->filters        = ['customFilter' => CustomFilter::run(...)];
         $this->config->extensions     = [TwigCustomExtension::class];
 
         $this->twig = new Twig($this->config);

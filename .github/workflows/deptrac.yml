@@ -7,7 +7,7 @@ on:
     paths:
       - '**.php'
       - 'composer.*'
-      - 'depfile.yaml'
+      - 'deptrac.yaml'
       - '.github/workflows/deptrac.yml'
   push:
     branches:
@@ -15,7 +15,7 @@ on:
     paths:
       - '**.php'
       - 'composer.*'
-      - 'depfile.yaml'
+      - 'deptrac.yaml'
       - '.github/workflows/deptrac.yml'
 
 jobs:
@@ -31,7 +31,7 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.1'
+          php-version: '8.5'
           tools: phive
           extensions: intl, json, mbstring, xml
           coverage: none

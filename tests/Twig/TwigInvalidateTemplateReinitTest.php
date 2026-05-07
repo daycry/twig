@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Twig;
 
 use CodeIgniter\Test\CIUnitTestCase;
@@ -29,7 +31,7 @@ final class TwigInvalidateTemplateReinitTest extends CIUnitTestCase
         $loader->setTemplate('sample.twig', 'Version B');
 
         // Without invalidation, depending on caching/in-memory class, might still return A
-        $outBefore = $twig->render('sample');
+        $twig->render('sample');
 
         // Invalidate with reinitialize to force recompilation
         $twig->invalidateTemplate('sample', true);

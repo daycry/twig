@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Twig;
 
 use CodeIgniter\Test\CIUnitTestCase;
@@ -30,6 +32,6 @@ final class TwigCompileIndexTest extends CIUnitTestCase
         $this->assertArrayHasKey('welcome', $json);
         // New instance should load index
         $twig2 = new Twig($cfg);
-        $this->assertTrue(in_array('welcome', array_column($twig2->listTemplates(true), 'name'), true));
+        $this->assertContains('welcome', array_column($twig2->listTemplates(true), 'name'));
     }
 }

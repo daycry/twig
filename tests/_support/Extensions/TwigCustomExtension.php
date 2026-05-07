@@ -12,7 +12,7 @@ class TwigCustomExtension extends AbstractExtension
     public function getFilters()
     {
         return [
-            new TwigFilter('cast_to_array', [$this, 'castToArray']),
+            new TwigFilter('cast_to_array', $this->castToArray(...)),
         ];
     }
 

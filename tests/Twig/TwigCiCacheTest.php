@@ -1,22 +1,26 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Twig;
 
 use CodeIgniter\Test\CIUnitTestCase;
 use Daycry\Twig\Config\Twig as TwigConfig;
 use Daycry\Twig\Twig;
 
-/** @internal */
+/**
+ * @internal
+ */
 final class TwigCiCacheTest extends CIUnitTestCase
 {
     public function testCiCacheBackendRendersAndReuses()
     {
         $config        = new TwigConfig();
         $config->paths = ['./tests/_support/Templates/'];
-    // Global cache prefix drives derived twig_ prefix; ensure deterministic value
-    $cacheCfg         = config('Cache');
-    $cacheCfg->prefix = 'twigtest';
-        $twig                = new Twig($config);
+        // Global cache prefix drives derived twig_ prefix; ensure deterministic value
+        $cacheCfg         = config('Cache');
+        $cacheCfg->prefix = 'twigtest';
+        $twig             = new Twig($config);
 
         // First render (compilation)
         $out1 = $twig->render('welcome', ['name' => 'CI']);

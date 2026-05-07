@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-versions: ['8.1', '8.2']
+        php-versions: ['8.2', '8.3', '8.4', '8.5']
 
     steps:
       - uses: actions/checkout@v4
@@ -48,7 +48,7 @@ jobs:
         run: script -e -c "vendor/bin/phpunit"
       
       - name: Run Coveralls
-        if: matrix.php-versions == '8.2'
+        if: matrix.php-versions == '8.5'
         run: |
           composer global require --ansi php-coveralls/php-coveralls:^2.7
           php-coveralls --coverage_clover=build/coverage/clover.xml -v

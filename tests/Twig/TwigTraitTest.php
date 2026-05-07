@@ -1,11 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Twig;
 
 use CodeIgniter\Test\CIUnitTestCase;
 use Daycry\Twig\Config\Twig as TwigConfig;
 use Daycry\Twig\Traits\Viewable;
-use Daycry\Twig\Twig;
 use Tests\Support\Filters\CustomFilter;
 
 /**
@@ -16,7 +17,6 @@ final class TwigTraitTest extends CIUnitTestCase
     use Viewable;
 
     protected TwigConfig $config;
-    protected Twig $twig;
 
     protected function setUp(): void
     {
@@ -26,7 +26,7 @@ final class TwigTraitTest extends CIUnitTestCase
         $this->config                 = new TwigConfig();
         $this->config->paths          = ['./tests/_support/Templates/'];
         $this->config->functions_asis = ['md5'];
-        $this->config->filters        = ['customFilter' => [CustomFilter::class, 'run']];
+        $this->config->filters        = ['customFilter' => CustomFilter::run(...)];
     }
 
     public function testRender()

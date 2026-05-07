@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Twig;
 
 use CodeIgniter\Test\CIUnitTestCase;
@@ -10,11 +12,12 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
 
-/** @internal */
+/**
+ * @internal
+ */
 final class TwigWarmupTest extends CIUnitTestCase
 {
     private Twig $twig;
-    private string $cache;
 
     protected function setUp(): void
     {
@@ -38,8 +41,7 @@ final class TwigWarmupTest extends CIUnitTestCase
                 }
             }
         }
-        $this->twig  = new Twig($config);
-        $this->cache = $this->twig->getCachePath();
+        $this->twig = new Twig($config);
     }
 
     public function testWarmupSpecificTemplates()

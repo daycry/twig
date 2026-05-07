@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Twig;
 
 use CodeIgniter\Test\CIUnitTestCase;
@@ -13,7 +15,6 @@ use Twig\Loader\ArrayLoader;
 final class TwigHelperTest extends CIUnitTestCase
 {
     private $twig;
-    private $config;
 
     protected function setUp(): void
     {
@@ -21,11 +22,11 @@ final class TwigHelperTest extends CIUnitTestCase
 
         parent::setUp();
 
-        $this->config                 = new TwigConfig();
-        $this->config->paths          = ['./tests/_support/Templates/'];
-        $this->config->functions_asis = ['md5'];
+        $config                 = new TwigConfig();
+        $config->paths          = ['./tests/_support/Templates/'];
+        $config->functions_asis = ['md5'];
 
-        $this->twig = new Twig($this->config);
+        $this->twig = new Twig($config);
 
         $loader = new ArrayLoader([
             // Keys must include .twig because wrapper appends extension.

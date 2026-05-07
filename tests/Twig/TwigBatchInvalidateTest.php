@@ -1,12 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Twig;
 
 use CodeIgniter\Test\CIUnitTestCase;
 use Daycry\Twig\Config\Twig as TwigConfig;
 use Daycry\Twig\Twig;
 
-/** @internal */
+/**
+ * @internal
+ */
 final class TwigBatchInvalidateTest extends CIUnitTestCase
 {
     private Twig $twig;

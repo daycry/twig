@@ -1,14 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Twig;
 
 use CodeIgniter\Test\CIUnitTestCase;
 use Daycry\Twig\Config\Twig as TwigConfig;
 use Daycry\Twig\Twig;
-use FilesystemIterator;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use SplFileInfo;
 use Twig\Loader\ArrayLoader;
 
 /**
@@ -16,24 +14,6 @@ use Twig\Loader\ArrayLoader;
  */
 final class TwigCacheTest extends CIUnitTestCase
 {
-    private function listCacheFiles(string $path): array
-    {
-        if (! is_dir($path)) {
-            return [];
-        }
-        $files    = [];
-        $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS));
-
-        /** @var SplFileInfo $file */
-        foreach ($iterator as $file) {
-            if ($file->isFile()) {
-                $files[] = $file->getPathname();
-            }
-        }
-
-        return $files;
-    }
-
     public function testClearCacheRemovesCompiledTemplates()
     {
         $config            = new TwigConfig();
