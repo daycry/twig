@@ -5,6 +5,9 @@ Version 4.0 introduces a standalone core and a separately installable CodeIgnite
 `packages/codeigniter4`. Framework classes move namespaces, so this is a major
 release. PHP remains **8.2+**; Twig **3.30+** provides native removable cache behavior.
 
+For installation examples and a local path setup, see
+[INSTALLATION.md](INSTALLATION.md).
+
 ## Standalone applications
 
 Install `daycry/twig:^4.0`. Construct `Daycry\Twig\Configuration` and pass it to

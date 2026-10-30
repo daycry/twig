@@ -1,7 +1,9 @@
-# Twig toolkit for PHP and CodeIgniter 4
+# Daycry Twig: standalone PHP templates with an optional CodeIgniter 4 adapter
 
-Twig rendering, template discovery, warmup, cache invalidation and diagnostics for
-PHP **8.2+**, with an optional CodeIgniter **4.7+** adapter. Requires Twig **3.30+**.
+Render Twig templates in standalone PHP applications or through the optional
+CodeIgniter 4 adapter. The toolkit adds template discovery, cache warmup,
+invalidation, diagnostics and PSR-3 logging. Requires PHP **8.2+** and Twig
+**3.30+**; framework integration requires CodeIgniter **4.7+**.
 
 This source tree targets the next major release, **4.0**. Configuration and
 framework namespaces change; see [the migration guide](docs/MIGRATION.md).
@@ -29,8 +31,8 @@ composer require daycry/twig:^4.0
 composer require daycry/twig-codeigniter4:^4.0
 ```
 
-The core does not install CodeIgniter. For local development before publication,
-see the path repositories in `tests/Consumers`.
+The core does not install CodeIgniter. See the [installation guide](docs/INSTALLATION.md)
+for requirements, first templates and local development before publication.
 
 ## Standalone PHP
 
@@ -158,12 +160,15 @@ CI runs PHP 8.2, 8.3, 8.4 and 8.5. Isolated consumer checks install the core wit
 CodeIgniter and verify the adapter's framework discovery. No packages are
 published by these checks.
 
+- [Documentation index](docs/README.md)
+- [Installation and first templates](docs/INSTALLATION.md)
 - [Migration](docs/MIGRATION.md)
 - [Services and extension points](docs/SERVICES.md)
 - [Cache behavior](docs/CACHING.md)
 - [Performance](docs/PERFORMANCE.md)
 - [Diagnostics](docs/DIAGNOSTICS_REFERENCE.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Publishing both packages](docs/RELEASING.md)
 - [Changelog](CHANGELOG.md)
 
 ## License

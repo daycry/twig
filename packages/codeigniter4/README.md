@@ -1,4 +1,4 @@
-# Twig adapter for CodeIgniter 4
+# Daycry Twig: template rendering and framework services for CodeIgniter 4
 
 CodeIgniter 4 services, configuration, helpers, Spark commands, cache-service
 integration and optional debug toolbar for the standalone `daycry/twig` core.
@@ -26,5 +26,6 @@ collectors to display diagnostics.
 Both packages are developed at [daycry/twig](https://github.com/daycry/twig).
 This distribution is exported from `packages/codeigniter4` with `git subtree split`.
 Submit changes to the source repository. See the
+[installation guide](https://github.com/daycry/twig/blob/master/docs/INSTALLATION.md),
 [migration guide](https://github.com/daycry/twig/blob/master/docs/MIGRATION.md) and
 [release procedure](https://github.com/daycry/twig/blob/master/docs/RELEASING.md).

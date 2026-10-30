@@ -19,7 +19,7 @@ The core and adapter target version 4.0. The final user clarification requires t
 
 | Fase | Completadas | Total |
 |---|---|---|
-| Fase 1 | 7 | 7 |
+| Fase 1 | 8 | 8 |
 
 ## Fase 1 — Implementation
 
@@ -88,6 +88,15 @@ The core and adapter target version 4.0. The final user clarification requires t
 - [x] Exclude the adapter and development state from core distributions; ship adapter README and license.
 - [x] Document and prepare the generated adapter mirror and Packagist registration without creating stable version tags.
 - **Notas**: Explicit final user instruction supersedes the T-06 single-package interpretation. Runtime namespaces and implementation remain unchanged. Source checks pass before exporting the tested source tree. The public adapter distribution repository has been created; the source upload and mirror export follow this commit. Stable tags are not created by this setup.
+
+### T-08 — Clarify the README title and package documentation
+- **Estado**: completado
+- **Archivos**: `README.md`, `docs/**`, `packages/codeigniter4/README.md`
+- **Verificacion**: Checked 11 documentation files, 34 local Markdown links, balanced code fences and git diff whitespace; package examples agree with the validated manifests and isolated consumers.
+- **Changelog**: Explain standalone PHP rendering, the optional CI4 package, installation, migration and generated adapter distribution.
+**Criterios de aceptación**:
+- [x] Use an informative project title and update the README/docs for the final two-package architecture.
+- **Notas**: Explicit user follow-up. Added the documentation index and installation guide, clarified local development aliases versus published versions, and updated the adapter README. No runtime code changed.
 
 ## Revisión de dos lentes — intento 1: implementación — corregido
 

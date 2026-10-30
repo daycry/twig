@@ -7,6 +7,9 @@ developed in `packages/codeigniter4` in the source repository. Install the adapt
 and update namespaces using [MIGRATION.md](MIGRATION.md). The core
 `Daycry\Twig\Twig` deliberately does not load framework helpers or resolve services.
 
+The [installation guide](INSTALLATION.md) describes the two dependency graphs
+and local path repositories.
+
 ## Standalone templates cannot be found
 
 Set `Configuration::$paths` to existing directories or call `withLoader()`.
