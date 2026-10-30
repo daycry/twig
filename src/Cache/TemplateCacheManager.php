@@ -30,9 +30,7 @@ class TemplateCacheManager implements CacheManagerInterface
     public function seedCompiled(array $names): void
     {
         foreach ($names as $n) {
-            if (is_string($n)) {
-                $this->compiledTemplates[$n] = true;
-            }
+            $this->compiledTemplates[$n] = true;
         }
         $this->compileIndexLoaded = true; // assume authoritative
     }
@@ -63,7 +61,7 @@ class TemplateCacheManager implements CacheManagerInterface
         if (is_file($indexPath)) {
             $json = @file_get_contents($indexPath);
             if ($json !== false) {
-                $data = PersistenceDecoder::decode(is_string($json) ? $json : null);
+                $data = PersistenceDecoder::decode($json);
                 if ($data !== null) {
                     foreach ($data as $k => $v) {
                         if (is_string($k) && ($v === true || $v === 1)) {

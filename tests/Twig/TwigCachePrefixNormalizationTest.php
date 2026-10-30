@@ -4,16 +4,23 @@ declare(strict_types=1);
 
 namespace Tests\Twig;
 
-use CodeIgniter\Test\CIUnitTestCase;
-use Daycry\Twig\Config\Twig as TwigConfig;
-use Daycry\Twig\Twig;
-use ReflectionClass;
+use Config\Services;
+use Daycry\Twig\CodeIgniter4\Config\Twig as TwigConfig;
+use Daycry\Twig\CodeIgniter4\Twig;
+use Tests\Support\ArrayCache;
+use Tests\Support\TestCase as CIUnitTestCase;
 
 /**
  * @internal
  */
 final class TwigCachePrefixNormalizationTest extends CIUnitTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Services::injectMock('cache', new ArrayCache());
+    }
+
     private function getResolvedPrefix(string $globalPrefix): string
     {
         $cacheCfg         = config('Cache');
@@ -21,9 +28,8 @@ final class TwigCachePrefixNormalizationTest extends CIUnitTestCase
         $cfg              = new TwigConfig();
         $cfg->paths       = ['./tests/_support/Templates/'];
         $twig             = new Twig($cfg);
-        $rp               = (new ReflectionClass($twig))->getProperty('cachePrefix');
 
-        return $rp->getValue($twig);
+        return $twig->getDiagnostics()['cache']['prefix'];
     }
 
     public function testEmptyGlobal(): void

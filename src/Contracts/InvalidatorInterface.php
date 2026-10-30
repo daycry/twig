@@ -2,6 +2,7 @@
 
 namespace Daycry\Twig\Contracts;
 
+use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 
 /**
@@ -15,17 +16,17 @@ use Twig\Loader\FilesystemLoader;
  */
 interface InvalidatorInterface
 {
-    public function invalidateOne(string $logicalName, string $cacheDir, bool $reinitialize, callable $resetTwig, callable $log): int;
+    public function invalidateOne(string $logicalName, Environment $environment, bool $reinitialize, callable $resetTwig, callable $log): int;
 
     /**
      * @param list<string> $logicalNames
      *
      * @return array{removed:int,templates:array<string,int>,reinit:bool}
      */
-    public function invalidateMany(array $logicalNames, string $cacheDir, bool $reinitialize, callable $resetTwig, callable $log): array;
+    public function invalidateMany(array $logicalNames, Environment $environment, bool $reinitialize, callable $resetTwig, callable $log): array;
 
     /**
      * @return array{removed:int,templates:array<string,int>,reinit:bool}
      */
-    public function invalidateNamespace(?string $namespace, string $cacheDir, bool $reinitialize, FilesystemLoader $loader, callable $resetTwig, callable $log): array;
+    public function invalidateNamespace(?string $namespace, Environment $environment, bool $reinitialize, FilesystemLoader $loader, callable $resetTwig, callable $log): array;
 }

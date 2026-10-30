@@ -5,16 +5,12 @@ namespace Daycry\Twig\Invalidation;
 use Daycry\Twig\Contracts\CacheManagerInterface;
 use Daycry\Twig\Contracts\DiscoveryInterface;
 use Daycry\Twig\Contracts\InvalidatorInterface;
-use FilesystemIterator;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use SplFileInfo;
+use Daycry\Twig\Runtime\Environment as ManagedEnvironment;
+use Twig\Cache\RemovableCacheInterface;
+use Twig\Environment;
+use Twig\Error\LoaderError;
 use Twig\Loader\FilesystemLoader;
 
-/**
- * Handles invalidation (single, batch, namespace) of compiled Twig templates.
- * Delegates discovery to TemplateDiscovery and compiled state tracking to TemplateCacheManager.
- */
 class TemplateInvalidator implements InvalidatorInterface
 {
     public function __construct(
@@ -24,157 +20,66 @@ class TemplateInvalidator implements InvalidatorInterface
     ) {
     }
 
-    /**
-     * Compute md5 hash (logical name + extension) like Twig's compiled filename base.
-     */
-    private function compiledCacheHash(string $logicalName): string
+    public function invalidateOne(string $logicalName, Environment $environment, bool $reinitialize, callable $resetTwig, callable $log): int
     {
-        return md5($logicalName . $this->extension);
+        $result = $this->invalidateMany([$logicalName], $environment, $reinitialize, $resetTwig, $log);
+
+        return $result['removed'];
     }
 
-    /**
-     * Invalidate a single logical template (without extension). Returns removed file count.
-     */
-    public function invalidateOne(string $logicalName, string $cacheDir, bool $reinitialize, callable $resetTwig, callable $log): int
+    public function invalidateMany(array $logicalNames, Environment $environment, bool $reinitialize, callable $resetTwig, callable $log): array
     {
-        if ($cacheDir === '' || ! is_dir($cacheDir)) {
-            return 0;
-        }
-        $hash    = $this->compiledCacheHash($logicalName);
-        $removed = 0;
-        $it      = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($cacheDir, FilesystemIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::CHILD_FIRST,
-        );
+        $removed  = 0;
+        $affected = [];
+        $cache    = $environment->getCache(false);
 
-        /** @var SplFileInfo $file */
-        foreach ($it as $file) {
-            if (! $file->isFile()) {
+        foreach (array_unique($logicalNames) as $logical) {
+            $this->cacheManager->forget($logical);
+            if (! $cache instanceof RemovableCacheInterface) {
                 continue;
             }
-            $path = $file->getPathname();
-            if (str_contains($file->getFilename(), $hash)) {
-                if (@unlink($path)) {
-                    $removed++;
+            $name = $logical . $this->extension;
+
+            try {
+                $current    = $environment->getTemplateClass($name);
+                $persistent = $environment instanceof ManagedEnvironment ? $environment->getPersistentTemplateClass($name) : $current;
+                $count      = 0;
+                if ($persistent !== $current) {
+                    $persistentKey = $cache->generateKey($name, $persistent);
+                    if ($cache->getTimestamp($persistentKey) > 0) {
+                        $count++;
+                    }
+                    $cache->remove($name, $persistent);
                 }
+                $key = $cache->generateKey($name, $current);
+                if ($cache->getTimestamp($key) > 0) {
+                    $count++;
+                }
+                $environment->removeCache($name);
+                if ($count > 0) {
+                    $affected[$logical] = $count;
+                    $removed += $count;
+                }
+            } catch (LoaderError) {
+                // A deleted source has no current loader key; its index entry is still forgotten.
             }
+        }
+        if ($reinitialize && $removed > 0) {
+            $resetTwig();
         }
         if ($removed > 0) {
-            $this->cacheManager->forget($logicalName);
-            $log('info', 'event=twig.template.invalidated template=' . $logicalName . ' removed=' . $removed);
-            if ($reinitialize) {
-                $resetTwig();
-            }
+            $log('info', 'event=twig.templates.invalidated removed=' . $removed);
         }
 
-        return $removed;
+        return ['removed' => $removed, 'templates' => $affected, 'reinit' => $reinitialize && $removed > 0];
     }
 
-    /**
-     * Batch invalidate logical template names (deduplicated). Returns array summary.
-     */
-    public function invalidateMany(array $logicalNames, string $cacheDir, bool $reinitialize, callable $resetTwig, callable $log): array
+    public function invalidateNamespace(?string $namespace, Environment $environment, bool $reinitialize, FilesystemLoader $loader, callable $resetTwig, callable $log): array
     {
-        $unique = [];
+        $names = $this->discovery->listAll($loader, $this->extension);
+        $names = array_values(array_filter($names, static fn (string $name): bool => $namespace === null
+            ? ! str_starts_with($name, '@') : str_starts_with($name, $namespace . '/')));
 
-        foreach ($logicalNames as $candidate) {
-            $name = trim($candidate);
-            if ($name === '' || isset($unique[$name])) {
-                continue;
-            }
-            $unique[$name] = true;
-        }
-        $names        = array_keys($unique);
-        $deduplicated = count($logicalNames) - count($names);
-        $count        = count($names);
-        if ($count === 0) {
-            return ['removed' => 0, 'templates' => [], 'reinit' => false];
-        }
-        if ($count === 1) {
-            $removed = $this->invalidateOne($names[0], $cacheDir, $reinitialize, $resetTwig, $log);
-            if ($removed > 0) {
-                $log('info', 'event=twig.templates.invalidated count=1 removed=' . $removed . ' dedup=' . $deduplicated);
-            }
-
-            return ['removed' => $removed, 'templates' => $removed ? [$names[0] => $removed] : [], 'reinit' => $removed > 0 && $reinitialize];
-        }
-        if ($cacheDir === '' || ! is_dir($cacheDir)) {
-            return ['removed' => 0, 'templates' => [], 'reinit' => false];
-        }
-        $hashMap    = [];
-        $removedPer = [];
-
-        foreach ($names as $logical) {
-            $h                    = $this->compiledCacheHash($logical);
-            $hashMap[$h]          = $logical;
-            $removedPer[$logical] = 0;
-        }
-        $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($cacheDir, FilesystemIterator::SKIP_DOTS));
-
-        /** @var SplFileInfo $file */
-        foreach ($it as $file) {
-            if (! $file->isFile()) {
-                continue;
-            }
-            $path = $file->getPathname();
-            $name = $file->getFilename();
-
-            foreach ($hashMap as $hash => $logical) {
-                if (str_contains($name, $hash)) {
-                    if (@unlink($path)) {
-                        $removedPer[$logical]++;
-                    }
-                    break;
-                }
-            }
-        }
-        $affected     = [];
-        $totalRemoved = 0;
-
-        foreach ($removedPer as $logical => $cnt) {
-            if ($cnt > 0) {
-                $affected[$logical] = $cnt;
-                $this->cacheManager->forget($logical);
-                $totalRemoved += $cnt;
-            }
-        }
-        if ($totalRemoved > 0) {
-            if ($reinitialize) {
-                $resetTwig();
-            }
-            $log('info', 'event=twig.templates.invalidated count=' . count($affected) . ' removed=' . $totalRemoved . ' dedup=' . $deduplicated . ' optimized=1');
-        }
-
-        return ['removed' => $totalRemoved, 'templates' => $affected, 'reinit' => $totalRemoved > 0 && $reinitialize];
-    }
-
-    /**
-     * Invalidate namespace (with leading @) or root (null).
-     */
-    public function invalidateNamespace(?string $namespace, string $cacheDir, bool $reinitialize, FilesystemLoader $loader, callable $resetTwig, callable $log): array
-    {
-        $names  = $this->discovery->listAll($loader, $this->extension);
-        $target = [];
-        if ($namespace === null) {
-            foreach ($names as $n) {
-                if ($n !== '' && $n[0] !== '@') {
-                    $target[] = $n;
-                }
-            }
-        } else {
-            $prefix = rtrim($namespace, '/') . '/';
-
-            foreach ($names as $n) {
-                if (str_starts_with($n, $prefix) || $n === $namespace) {
-                    $target[] = $n;
-                }
-            }
-        }
-        $result = $this->invalidateMany($target, $cacheDir, $reinitialize, $resetTwig, $log);
-        if ($result['removed'] > 0) {
-            $log('info', 'event=twig.namespace.invalidated namespace=' . ($namespace ?? 'MAIN') . ' removed=' . $result['removed']);
-        }
-
-        return $result;
+        return $this->invalidateMany($names, $environment, $reinitialize, $resetTwig, $log);
     }
 }

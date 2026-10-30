@@ -4,15 +4,23 @@ declare(strict_types=1);
 
 namespace Tests\Twig;
 
-use CodeIgniter\Test\CIUnitTestCase;
-use Daycry\Twig\Config\Twig as TwigConfig;
-use Daycry\Twig\Twig;
+use Config\Services;
+use Daycry\Twig\CodeIgniter4\Config\Twig as TwigConfig;
+use Daycry\Twig\CodeIgniter4\Twig;
+use Tests\Support\ArrayCache;
+use Tests\Support\TestCase as CIUnitTestCase;
 
 /**
  * @internal
  */
 final class TwigCiCacheTest extends CIUnitTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Services::injectMock('cache', new ArrayCache());
+    }
+
     public function testCiCacheBackendRendersAndReuses()
     {
         $config        = new TwigConfig();

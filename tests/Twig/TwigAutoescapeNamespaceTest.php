@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Twig;
 
-use CodeIgniter\Test\CIUnitTestCase;
-use Daycry\Twig\Twig;
+use Daycry\Twig\CodeIgniter4\Twig;
+use Tests\Support\TestCase as CIUnitTestCase;
 
 /**
  * @internal

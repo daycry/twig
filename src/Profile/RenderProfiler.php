@@ -28,9 +28,7 @@ final class RenderProfiler
             : '__overflow__';
 
         $ms = $elapsedSeconds * 1000.0;
-        if (! isset($this->entries[$key])) {
-            $this->entries[$key] = ['count' => 0, 'total_ms' => 0.0, 'max_ms' => 0.0];
-        }
+        $this->entries[$key] ??= ['count' => 0, 'total_ms' => 0.0, 'max_ms' => 0.0];
         $this->entries[$key]['count']++;
         $this->entries[$key]['total_ms'] += $ms;
         if ($ms > $this->entries[$key]['max_ms']) {

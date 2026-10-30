@@ -19,17 +19,19 @@ composer install
 composer ci          # cs (dry-run) + deduplicate + analyze + test
 composer cs-fix      # apply cs-fixer changes
 composer analyze     # phpstan
-composer test        # phpunit
+composer test        # standalone + CodeIgniter suites
 ```
 
-`composer ci` is the canonical green-light check before pushing. CI runs the
+`composer ci` checks the core and adapter: style, duplicate detection, static analysis,
+standalone/adapter tests and architecture boundaries. It is the canonical
+green-light check before pushing. CI runs the
 same on PHP 8.2, 8.3, 8.4 and 8.5.
 
 ## What to send
 
 - **Bug fixes** — include a regression test that fails on `master` and passes
   with the patch.
-- **New CLI commands / public methods** — extend `AbstractTwigCommand`,
+- **New CLI commands / public methods** — extend `Daycry\Twig\CodeIgniter4\Commands\AbstractTwigCommand`,
   return integer exit codes, support `--json` when output is structured.
 - **Behavior changes touching cache / persistence** — note the migration in
   `CHANGELOG.md` `[Unreleased]` (Added / Changed / Fixed / Security).
@@ -44,6 +46,10 @@ same on PHP 8.2, 8.3, 8.4 and 8.5.
   the *why* is non-obvious.
 - Prefer interfaces from `Daycry\Twig\Contracts\` for new dependencies — keeps
   things mockable in tests.
+- Core code in `src/` must not resolve framework services or depend on framework
+  constants. Keep CI4-specific behavior under `src/Adapter/CodeIgniter4/`.
+- Consumer fixtures under `tests/Consumers` install their own runtime dependencies;
+  their `vendor/` and generated `writable/` directories are not analysis input.
 - New persisted JSON shapes go through `Daycry\Twig\Support\PersistenceDecoder`
   with a schema describing required keys/types.
 

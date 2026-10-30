@@ -1,0 +1,25 @@
+{
+    "name": "tests/twig-standalone-consumer",
+    "require": {
+        "daycry/twig": "^4.0"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../../..",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "daycry/twig": "4.0.0"
+                },
+                "reference": "config"
+            }
+        }
+    ],
+    "config": {
+        "platform": {
+            "php": "8.2.0"
+        },
+        "allow-plugins": false
+    }
+}

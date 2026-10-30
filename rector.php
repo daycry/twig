@@ -18,13 +18,19 @@ return static function (RectorConfig $rectorConfig): void {
         SetList::DEAD_CODE,
         LevelSetList::UP_TO_PHP_82,
         PHPUnitSetList::PHPUNIT_CODE_QUALITY,
-        PHPUnitSetList::PHPUNIT_100,
+        PHPUnitSetList::PHPUNIT_NARROW_ASSERTS,
     ]);
     $rectorConfig->parallel();
 
     $rectorConfig->paths([
         __DIR__ . '/src/',
-        __DIR__ . '/tests/',
+        __DIR__ . '/tests/Standalone/',
+        __DIR__ . '/tests/Twig/',
+        __DIR__ . '/tests/Collectors/',
+        __DIR__ . '/tests/_support/',
+        __DIR__ . '/tests/bootstrap.php',
+        __DIR__ . '/tests/Consumers/standalone/smoke.php',
+        __DIR__ . '/tests/Consumers/codeigniter/smoke.php',
     ]);
 
     $rectorConfig->autoloadPaths([
@@ -32,7 +38,7 @@ return static function (RectorConfig $rectorConfig): void {
     ]);
 
     $rectorConfig->bootstrapFiles([
-        realpath(getcwd()) . '/vendor/codeigniter4/framework/system/Test/bootstrap.php',
+        __DIR__ . '/tests/bootstrap.php',
     ]);
 
     if (is_file(__DIR__ . '/phpstan.neon.dist')) {
@@ -44,6 +50,8 @@ return static function (RectorConfig $rectorConfig): void {
 
     // Targeted skips: rules we don't want applied repo-wide.
     $rectorConfig->skip([
+        __DIR__ . '/tests/Consumers/*/vendor/*',
+        __DIR__ . '/tests/Consumers/*/writable/*',
         __DIR__ . '/src/Views',
 
         // Promoted properties may stay even if currently unused (public contract / DI shape).

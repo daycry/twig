@@ -44,6 +44,9 @@ jobs:
       - name: Install dependencies
         run: composer install --ansi --no-interaction
 
+      - name: Test standalone core
+        run: vendor/bin/phpunit -c phpunit.standalone.xml.dist --no-coverage
+
       - name: Test with PHPUnit
         run: script -e -c "vendor/bin/phpunit"
       

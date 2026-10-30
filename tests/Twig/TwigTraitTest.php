@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Twig;
 
-use CodeIgniter\Test\CIUnitTestCase;
-use Daycry\Twig\Config\Twig as TwigConfig;
-use Daycry\Twig\Traits\Viewable;
+use Daycry\Twig\CodeIgniter4\Config\Twig as TwigConfig;
+use Daycry\Twig\CodeIgniter4\Traits\Viewable;
 use Tests\Support\Filters\CustomFilter;
+use Tests\Support\TestCase as CIUnitTestCase;
 
 /**
  * @internal

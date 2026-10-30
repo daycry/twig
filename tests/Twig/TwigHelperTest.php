@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Twig;
 
-use CodeIgniter\Test\CIUnitTestCase;
-use Daycry\Twig\Config\Twig as TwigConfig;
-use Daycry\Twig\Twig;
+use Daycry\Twig\CodeIgniter4\Config\Twig as TwigConfig;
+use Daycry\Twig\CodeIgniter4\Twig;
+use ReflectionProperty;
+use Tests\Support\TestCase as CIUnitTestCase;
 use Twig\Loader\ArrayLoader;
 
 /**
@@ -37,11 +38,6 @@ final class TwigHelperTest extends CIUnitTestCase
 
         // Use new public API instead of reflection hacks
         $this->twig->withLoader($loader);
-    }
-
-    public static function setUpBeforeClass(): void
-    {
-        parent::setUpBeforeClass();
     }
 
     public function testAnchor()
@@ -76,7 +72,7 @@ final class TwigHelperTest extends CIUnitTestCase
         $actual   = $this->twig->render('base_url');
         $expected = 'http://localhost/%22%3E%3Cs%3Eabc%3C/s%3E%3Ca%20name=%22test';
         $this->assertSame($expected, $actual);
-        $this->assertTrue($this->getPrivateProperty($this->twig, 'functions_added'));
+        $this->assertTrue((new ReflectionProperty(\Daycry\Twig\Twig::class, 'functions_added'))->getValue($this->twig));
     }
 
     public function testSiteUrl()

@@ -2,6 +2,8 @@
 
 namespace Daycry\Twig\Config;
 
+use Daycry\Twig\Configuration;
+
 /**
  * Resolved capability matrix derived from `Config\Twig::$leanMode` plus the
  * five nullable `enable*` overrides. Replacing the inline associative array
@@ -26,9 +28,9 @@ final readonly class CapabilitiesProfile
      * Build the profile from a config instance, applying lean defaults plus
      * nullable per-flag overrides (where `null` means "inherit profile").
      */
-    public static function fromConfig(Twig $config): self
+    public static function fromConfig(Configuration $config): self
     {
-        $lean      = $config->leanMode ?? false;
+        $lean      = $config->leanMode;
         $baseValue = ! $lean; // full → true, lean → false
 
         $resolve = static fn (?bool $override): bool => $override ?? $baseValue;

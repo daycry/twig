@@ -18,7 +18,7 @@ final class PersistenceDecoder
      * Decode a JSON payload into an associative array. Returns `null` when the
      * payload is missing, empty, malformed, or not an object/array at the root.
      *
-     * @return array<string,mixed>|null
+     * @return array<array-key,mixed>|null
      */
     public static function decode(?string $json): ?array
     {
@@ -44,7 +44,7 @@ final class PersistenceDecoder
      *
      * @param array<string,string> $schema
      *
-     * @return array<string,mixed>|null
+     * @return array<array-key,mixed>|null
      */
     public static function decodeWithSchema(?string $json, array $schema): ?array
     {

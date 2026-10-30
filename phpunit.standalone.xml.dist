@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.5/phpunit.xsd"
+ bootstrap="tests/Standalone/bootstrap.php" colors="true" failOnWarning="true"
+ failOnRisky="true" cacheDirectory="build/.phpunit-standalone.cache">
+ <testsuites><testsuite name="Standalone"><directory suffix="Test.php">tests/Standalone</directory></testsuite></testsuites>
+ <source><include><directory suffix=".php">src</directory></include></source>
+</phpunit>

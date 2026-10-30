@@ -1,85 +1,47 @@
 # Troubleshooting
 
-Common problems and how to diagnose them. Also see `docs/CACHING.md` and
-`docs/PERFORMANCE.md` for the conceptual model.
+## Framework classes are missing after upgrading
 
-> Run `php spark twig:doctor` first — it surfaces most of the issues below
-> automatically.
+Version 4 includes CodeIgniter integration in `src/Adapter/CodeIgniter4` within
+`daycry/twig`. Update namespaces using [MIGRATION.md](MIGRATION.md). The core
+`Daycry\Twig\Twig` deliberately does not load framework helpers or resolve services.
 
-## "No templates discovered"
+## Standalone templates cannot be found
 
-`Twig::listTemplates()` returns an empty array, `twig:warmup --all` does
-nothing, the toolbar template panel is empty.
+Set `Configuration::$paths` to existing directories or call `withLoader()`.
+Names passed to `render()` omit the extension. Names passed directly to the
+native Twig environment include it. Use `addPath($path, 'admin')` and
+`render('@admin/name')` for namespaced templates.
 
-1. Confirm `Config\Twig::$paths` contains existing, readable directories:
-   ```bash
-   php spark twig:doctor
-   ```
-2. If you use namespaced paths, the syntax is `[<absolute path>, '<namespace>']`
-   — not `'<namespace>' => <path>'`. Wrong syntax silently degrades to no paths.
-3. Lean Mode disables the discovery snapshot. If you previously relied on a
-   persisted list, the first request after enabling Lean re-scans from disk; a
-   broken path will surface as "empty list" rather than "stale snapshot".
+## Warmup skips a template unexpectedly
 
-## Compiled cache never cleared
+Inspect the actual backend and cache key instead of relying solely on the compile
+index. Missing artifacts are recompiled. `warmup($names, true)` compiles source
+again. Set `TWIG_WARMUP_VERBOSE=1` for per-template error details. Warmup compiles
+but never renders templates or executes registered template functions.
 
-`twig:clear-cache` reports "No cache files found".
+## A new nested template does not appear
 
-1. The active backend may not be the filesystem. Check `getDiagnostics()['cache']['mode']`
-   — when it's `service`, compiled templates live in Redis/Memcached and the
-   filesystem path is empty by design. Use `twig:clear-cache` (which routes
-   through the adapter) and not manual `rm -rf`.
-2. The cache prefix derives from `Config\Cache::$prefix`. If the global prefix
-   ends with `_`, compiled keys live under `_twig_<sha>`; otherwise under
-   `twig_<sha>`. A mismatch between writer and reader will look like "nothing to
-   clear" / "always recompiles".
+Without a deployment version, construct a new renderer or reset discovery with
+`resetTwig()`. If `discoveryVersion` is configured, update it whenever the deployed
+template tree changes. A repeated listing on the same renderer intentionally
+uses its in-memory list.
 
-## Cache writes succeed but reads always recompile
+## Data appears in a later render
 
-Likely cause on the CI cache backend: a previous version wrote unsigned
-payloads. Since v3.x the adapter requires HMAC and silently discards entries
-without a valid signature (logging `event=twig.cache.adapter.signature_invalid`
-at warning level).
+`saveData` defaults to true. Set it to false when render calls should be isolated.
+Use one renderer per request/job in persistent workers, or deliberately manage
+its retained context.
 
-Fix: run `php spark twig:clear-cache --reinit` once. New entries will be signed.
+## Remote cache clearing reports zero
 
-## "Method ReflectionProperty::setAccessible() is deprecated since 8.5"
+Whole-cache clearing rotates a generation and cannot report the number of remote
+objects made obsolete. It does not clear unrelated application cache. Old
+compiled payloads expire automatically; see [CACHING.md](CACHING.md).
 
-The `setAccessible()` call became a no-op in PHP 8.1+. Tests calling it on
-PHP ≥ 8.5 emit a deprecation. Either remove the call (recommended — the
-bundled tests already do) or run on a 8.2–8.4 toolchain.
+## Checking CodeIgniter discovery
 
-## APCu warns "not enabled"
-
-`twig:doctor` reports `[WARNING] apcu — APCu extension installed but not enabled`.
-Set `apc.enabled=1` and `apc.enable_cli=1` (the second matters for `spark`
-warmup commands). Without APCu the discovery snapshot still works via
-filesystem; only the in-process accelerator is missing.
-
-## `twig:warmup` reports zero compiled but templates do exist
-
-1. Templates already compiled. Add `--force` to recompile.
-2. The supplied logical names are wrong (typo, missing namespace prefix). Run
-   `twig:list` to see what discovery actually found.
-3. With CI cache backend the `compile-index.json` is reconstructed at startup
-   when keys are present but the index is missing — `twig:doctor` will warn
-   `Compile index was reconstructed`; running `twig:warmup --all` rebuilds it.
-
-## Logs are missing after upgrading to v3
-
-v3 normalized log lines to `event=<name> key=value`. Ad-hoc human messages were
-removed. Update any log parser that grepped for the old text.
-
-## `getDiagnostics()` is huge
-
-In Lean Mode (`leanMode = true`) only the core sections are present. In Full
-Mode you can selectively turn off `enableExtendedDiagnostics`,
-`enableDynamicMetrics`, `enableInvalidationHistory`, `enableWarmupSummary`,
-`enableDiscoverySnapshot` to drop sections.
-
-## CLI command exits 0 even on failure
-
-Pre-3.x commands silently returned without an exit code. Since v3 the commands
-return `EXIT_SUCCESS` (0), `EXIT_USER_INPUT` (7) or `EXIT_ERROR` (1). If you
-see exit code 0 after an obvious error, you may be running an older copy from
-your vendor cache: `composer dump-autoload` and re-run.
+Run `php spark list` and inspect the `twig:*` commands. Check that Composer loads
+`Daycry\Twig\CodeIgniter4` and the framework has Composer discovery enabled.
+`helper('twig_helper')` should resolve the adapter's helper file. `twig:doctor`,
+`twig:lint` and `twig:diagnostics --json` help inspect runtime configuration.

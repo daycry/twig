@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Twig;
 
-use CodeIgniter\Test\CIUnitTestCase;
-use Daycry\Twig\Config\Twig as TwigConfig;
-use Daycry\Twig\Twig;
+use Daycry\Twig\CodeIgniter4\Config\Twig as TwigConfig;
+use Daycry\Twig\CodeIgniter4\Twig;
 use stdClass;
 use Tests\Support\Extensions\TwigCustomExtension;
+use Tests\Support\TestCase as CIUnitTestCase;
 use Twig\Loader\ArrayLoader;
 
 /**

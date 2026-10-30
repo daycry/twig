@@ -1,0 +1,76 @@
+<?php
+
+namespace Daycry\Twig\CodeIgniter4\Commands;
+
+use CodeIgniter\CLI\CLI;
+
+class TwigList extends AbstractTwigCommand
+{
+    protected $name        = 'twig:list';
+    protected $description = 'Lists discovered Twig logical template names (optionally with compiled status).';
+    protected $usage       = 'twig:list [--status] [--json]';
+    protected $options     = [
+        '--status' => 'Include compiled status (yes/no).',
+        '--json'   => 'Emit JSON array (adds compiled flag if --status).',
+    ];
+
+    public function run(array $params)
+    {
+        $withStatus = $this->flag('status', $params);
+        $asJson     = $this->flag('json', $params);
+        $twig       = $this->twig();
+        if ($twig === null) {
+            return EXIT_ERROR;
+        }
+        $list = $twig->listTemplates($withStatus);
+        if ($asJson) {
+            if (! $withStatus) {
+                $payload = [
+                    'templates' => $list,
+                    'total'     => count($list),
+                ];
+            } else {
+                $compiledCount = 0;
+
+                foreach ($list as $row) {
+                    if (! empty($row['compiled'])) {
+                        $compiledCount++;
+                    }
+                }
+                $payload = [
+                    'templates' => $list,
+                    'total'     => count($list),
+                    'compiled'  => $compiledCount,
+                ];
+            }
+            CLI::write(json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+
+            return EXIT_SUCCESS;
+        }
+        if (empty($list)) {
+            CLI::write('No templates found.', 'yellow');
+
+            return EXIT_SUCCESS;
+        }
+        if (! $withStatus) {
+            foreach ($list as $name) {
+                CLI::write($name);
+            }
+            CLI::write('Total: ' . count($list));
+
+            return EXIT_SUCCESS;
+        }
+        $compiledCount = 0;
+
+        foreach ($list as $row) {
+            $compiled = $row['compiled'] ? 'yes' : 'no';
+            if ($row['compiled']) {
+                $compiledCount++;
+            }
+            CLI::write(str_pad((string) $row['name'], 50) . ' ' . $compiled);
+        }
+        CLI::write('Total: ' . count($list) . ' Compiled: ' . $compiledCount);
+
+        return EXIT_SUCCESS;
+    }
+}

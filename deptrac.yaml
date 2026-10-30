@@ -1,156 +1,26 @@
-parameters:
+deptrac:
   paths:
     - ./src/
-    - ./vendor/codeigniter4/framework/system/
-  exclude_files:
-    - '#.*test.*#i'
   layers:
-    - name: Model
+    - name: Core
       collectors:
         - type: bool
           must:
-          - type: classNameRegex
-            value: '/.*[A-Za-z]+Model$/'
+            - type: directory
+              value: src/.*
           must_not:
-          - type: directory
-            value: vendor/.*
-    - name: Vendor Model
+            - type: directory
+              value: src/Adapter/CodeIgniter4/.*
+    - name: Adapter
       collectors:
-        - type: bool
-          must:
-          - type: classNameRegex
-            value: '/.*[A-Za-z]+Model$/'
-          - type: directory
-            value: vendor/.*
-    - name: Controller
+        - type: directory
+          value: src/Adapter/CodeIgniter4/.*
+    - name: Framework
       collectors:
-        - type: bool
-          must:
-          - type: classNameRegex
-            value: '~.*/Controllers/.*~'
-          must_not:
-          - type: directory
-            value: vendor/.*
-    - name: Vendor Controller
-      collectors:
-        - type: bool
-          must:
-          - type: classNameRegex
-            value: '~.*/Controllers/.*~'
-          - type: directory
-            value: vendor/.*
-    - name: Config
-      collectors:
-        - type: bool
-          must:
-          - type: directory
-            value: src/Config/.*
-          must_not:
-          - type: classNameRegex
-            value: '/.*Services/'
-          - type: directory
-            value: vendor/.*
-    - name: Vendor Config
-      collectors:
-        - type: bool
-          must:
-          - type: directory
-            value: vendor/.*/Config/.*
-          must_not:
-          - type: classNameRegex
-            value: '/.*Services/'
-    - name: Entity
-      collectors:
-        - type: bool
-          must:
-          - type: directory
-            value: src/Entities/.*
-          must_not:
-          - type: directory
-            value: vendor/.*
-    - name: Vendor Entity
-      collectors:
-        - type: bool
-          must:
-          - type: directory
-            value: vendor/.*/Entities/.*
-    - name: View
-      collectors:
-        - type: bool
-          must:
-          - type: directory
-            value: src/Views/.*
-          must_not:
-          - type: directory
-            value: vendor/.*
-    - name: Vendor View
-      collectors:
-        - type: bool
-          must:
-          - type: directory
-            value: vendor/.*/Views/.*
-    - name: Service
-      collectors:
-        - type: classNameRegex
-          value: '/.*Services.*/'
+        - type: classLike
+          value: ^(CodeIgniter|Config)\\.*
   ruleset:
-    Entity:
-      - Config
-      - Model
-      - Service
-      - Vendor Config
-      - Vendor Entity
-      - Vendor Model
-    Config:
-      - Service
-      - Vendor Config
-    Model:
-      - Config
-      - Entity
-      - Service
-      - Vendor Config
-      - Vendor Entity
-      - Vendor Model
-    Service:
-      - Config
-      - Vendor Config
-
-    # Ignore anything in the Vendor layers
-    Vendor Model:
-      - Config
-      - Service
-      - Vendor Config
-      - Vendor Controller
-      - Vendor Entity
-      - Vendor Model
-      - Vendor View
-    Vendor Controller:
-      - Service
-      - Vendor Config
-      - Vendor Controller
-      - Vendor Entity
-      - Vendor Model
-      - Vendor View
-    Vendor Config:
-      - Config
-      - Service
-      - Vendor Config
-      - Vendor Controller
-      - Vendor Entity
-      - Vendor Model
-      - Vendor View
-    Vendor Entity:
-      - Service
-      - Vendor Config
-      - Vendor Controller
-      - Vendor Entity
-      - Vendor Model
-      - Vendor View
-    Vendor View:
-      - Service
-      - Vendor Config
-      - Vendor Controller
-      - Vendor Entity
-      - Vendor Model
-      - Vendor View
-  skip_violations: {}
+    Core: []
+    Adapter:
+      - Core
+      - Framework

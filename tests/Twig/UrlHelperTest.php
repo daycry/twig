@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Twig;
 
-use CodeIgniter\Test\CIUnitTestCase;
+use Tests\Support\TestCase as CIUnitTestCase;
 
 /**
  * @internal

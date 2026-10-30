@@ -49,7 +49,7 @@ final class TemplateNameValidator
     /**
      * Filter and validate a list of names. Invalid entries are dropped (with optional callback).
      *
-     * @param list<string>                      $names
+     * @param list<mixed>                       $names
      * @param callable(string,string):void|null $onInvalid Optional callback receiving (rawName, errorMessage)
      *
      * @return list<string>

@@ -3,6 +3,7 @@
 namespace Daycry\Twig\Registry;
 
 use Daycry\Twig\Contracts\DynamicRegistryInterface;
+use Daycry\Twig\Logging\TwigLogger;
 use Twig\Environment;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
@@ -10,7 +11,7 @@ use Twig\TwigFunction;
 /**
  * Manages dynamic (runtime) Twig functions & filters registration.
  * Keeps track of queued definitions prior to Environment creation and
- * applies them when requested. Framework logging delegated via global log_message helper.
+ * applies them when requested. Logging uses the optional injected logger.
  */
 class DynamicRegistry implements DynamicRegistryInterface
 {
@@ -34,6 +35,10 @@ class DynamicRegistry implements DynamicRegistryInterface
      */
     private array $pendingFilters = [];
 
+    public function __construct(private readonly ?TwigLogger $log = null)
+    {
+    }
+
     /**
      * Queue or immediately register a dynamic function.
      */
@@ -42,9 +47,7 @@ class DynamicRegistry implements DynamicRegistryInterface
         if ($env !== null && $envReady) {
             $env->addFunction(new TwigFunction($name, $callable, $options));
             $this->functions[$name] = ['callable' => $callable, 'options' => $options];
-            if (function_exists('log_message')) {
-                log_message('info', 'event=twig.function.registered name=' . $name);
-            }
+            $this->log?->log('info', 'event=twig.function.registered name=' . $name);
 
             return;
         }
@@ -53,9 +56,7 @@ class DynamicRegistry implements DynamicRegistryInterface
             'callable' => $callable,
             'options'  => $options,
         ];
-        if (function_exists('log_message')) {
-            log_message('info', 'event=twig.function.queued name=' . $name);
-        }
+        $this->log?->log('info', 'event=twig.function.queued name=' . $name);
     }
 
     /**
@@ -66,9 +67,7 @@ class DynamicRegistry implements DynamicRegistryInterface
         if ($env !== null && $envReady) {
             $env->addFilter(new TwigFilter($name, $callable, $options));
             $this->filters[$name] = ['callable' => $callable, 'options' => $options];
-            if (function_exists('log_message')) {
-                log_message('info', 'event=twig.filter.registered name=' . $name);
-            }
+            $this->log?->log('info', 'event=twig.filter.registered name=' . $name);
 
             return;
         }
@@ -77,9 +76,7 @@ class DynamicRegistry implements DynamicRegistryInterface
             'callable' => $callable,
             'options'  => $options,
         ];
-        if (function_exists('log_message')) {
-            log_message('info', 'event=twig.filter.queued name=' . $name);
-        }
+        $this->log?->log('info', 'event=twig.filter.queued name=' . $name);
     }
 
     /**
@@ -126,8 +123,8 @@ class DynamicRegistry implements DynamicRegistryInterface
         if ($this->pendingFunctions) {
             $this->pendingFunctions = array_values(array_filter($this->pendingFunctions, static fn ($f) => $f['name'] !== $name));
         }
-        if ($removed && function_exists('log_message')) {
-            log_message('info', 'event=twig.function.unregistered name=' . $name);
+        if ($removed) {
+            $this->log?->log('info', 'event=twig.function.unregistered name=' . $name);
         }
 
         return $removed;
@@ -146,8 +143,8 @@ class DynamicRegistry implements DynamicRegistryInterface
         if ($this->pendingFilters) {
             $this->pendingFilters = array_values(array_filter($this->pendingFilters, static fn ($f) => $f['name'] !== $name));
         }
-        if ($removed && function_exists('log_message')) {
-            log_message('info', 'event=twig.filter.unregistered name=' . $name);
+        if ($removed) {
+            $this->log?->log('info', 'event=twig.filter.unregistered name=' . $name);
         }
 
         return $removed;

@@ -2,82 +2,43 @@
 
 declare(strict_types=1);
 
-/**
- * This file is part of CodeIgniter Shield.
- *
- * (c) CodeIgniter Foundation <admin@codeigniter.com>
- *
- * For the full copyright and license information, please view
- * the LICENSE file that was distributed with this source code.
- */
-
 namespace Tests\Collectors;
 
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
-use Daycry\Twig\Config\Services;
-use Daycry\Twig\Debug\Toolbar\Collectors\Twig;
+use Daycry\Twig\CodeIgniter4\Config\Services;
+use Daycry\Twig\CodeIgniter4\Debug\Toolbar\Collectors\Twig;
+use Tests\Support\TestCase;
+use Twig\Loader\ArrayLoader;
 
 /**
  * @internal
  */
-final class TwigTest extends CIUnitTestCase
+final class TwigTest extends TestCase
 {
-    use DatabaseTestTrait;
-
-    protected $namespace;
-    protected $refresh = true;
-    private Twig $collector;
-
-    protected function setUp(): void
+    public function testBadgeTracksRenderedViews(): void
     {
-        parent::setUp();
-
-        $this->collector = new Twig();
+        Services::resetSingle('twig');
+        $twig = Services::twig();
+        $twig->withLoader(new ArrayLoader(['badge.twig' => 'badge']));
+        $twig->render('badge');
+        $this->assertSame(1, (new Twig())->getBadgeValue());
     }
 
-    public function testCollect()
+    public function testTabContentRenders(): void
     {
-        $this->assertInstanceOf(Twig::class, $this->collector);
+        $this->assertStringContainsString('Twig Diagnostics', (new Twig())->tabContent());
     }
 
-    public function testTabContentRenders()
+    public function testTwigViewPartialExists(): void
     {
-        $html = $this->collector->tabContent();
-        $this->assertIsString($html);
-        $this->assertStringContainsString('Twig Diagnostics', $html);
+        $this->assertFileExists(dirname(__DIR__, 2) . '/src/Adapter/CodeIgniter4/Debug/Toolbar/Views/_twig.tpl');
     }
 
-    public function testTwigViewPartialExists()
+    public function testDiagnosticsStructure(): void
     {
-        $path = realpath(__DIR__ . '/../../src/Debug/Toolbar/Views/_twig.tpl.php');
-        // When running from vendor or source tree, adjust if needed
-        if ($path === false) {
-            $this->markTestSkipped('Twig toolbar partial not found in expected relative location.');
+        $diagnostics = Services::twig()->getDiagnostics();
 
-            return;
-        }
-        $this->assertFileExists($path);
-        ob_start();
-        $vars = ['Twig Diagnostics' => []];
-        include $path; // should not throw
-        $out = ob_get_clean();
-        $this->assertIsString($out);
-    }
-
-    public function testDiagnosticsStructure()
-    {
-        // Access service instance to ensure Twig environment initializes
-        $service = Services::twig();
-        if (method_exists($service, 'getDiagnostics')) {
-            $diag = $service->getDiagnostics();
-            $this->assertIsArray($diag);
-            $this->assertArrayHasKey('renders', $diag);
-            $this->assertArrayHasKey('cache', $diag);
-            $this->assertArrayHasKey('discovery', $diag);
-            $this->assertArrayHasKey('performance', $diag);
-        } else {
-            $this->markTestSkipped('Diagnostics not available');
+        foreach (['renders', 'cache', 'discovery', 'performance'] as $key) {
+            $this->assertArrayHasKey($key, $diagnostics);
         }
     }
 }

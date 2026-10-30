@@ -2,8 +2,8 @@
 
 namespace Tests\Support\Traits;
 
-use Daycry\Twig\Config\Twig as TwigConfig;
-use Daycry\Twig\Twig;
+use Daycry\Twig\CodeIgniter4\Config\Twig as TwigConfig;
+use Daycry\Twig\CodeIgniter4\Twig;
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;

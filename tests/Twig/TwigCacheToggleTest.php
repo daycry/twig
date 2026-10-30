@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Twig;
 
-use CodeIgniter\Test\CIUnitTestCase;
-use Daycry\Twig\Twig;
+use Daycry\Twig\CodeIgniter4\Twig;
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use Tests\Support\TestCase as CIUnitTestCase;
 
 /**
  * @internal
@@ -17,7 +17,7 @@ final class TwigCacheToggleTest extends CIUnitTestCase
 {
     public function testDisableEnableCache(): void
     {
-        $cfg        = new \Daycry\Twig\Config\Twig();
+        $cfg        = new \Daycry\Twig\CodeIgniter4\Config\Twig();
         $cfg->paths = [__DIR__ . '/../_support/Templates'];
         $twig       = new Twig($cfg);
         $twig->warmup(['welcome']); // compile something
@@ -51,7 +51,7 @@ final class TwigCacheToggleTest extends CIUnitTestCase
         $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS));
 
         foreach ($it as $f) {
-            if ($f->isFile()) {
+            if ($f->isFile() && $f->getExtension() === 'php') {
                 $c++;
             }
         }

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Twig;
 
-use CodeIgniter\Test\CIUnitTestCase;
-use Daycry\Twig\Twig;
+use Daycry\Twig\CodeIgniter4\Twig;
+use Tests\Support\TestCase as CIUnitTestCase;
 
 /**
  * @internal
@@ -14,7 +14,7 @@ final class TwigCompileIndexTest extends CIUnitTestCase
 {
     public function testCompileIndexPersists(): void
     {
-        $cfg        = new \Daycry\Twig\Config\Twig();
+        $cfg        = new \Daycry\Twig\CodeIgniter4\Config\Twig();
         $cfg->paths = [__DIR__ . '/../_support/Templates'];
         $twig       = new Twig($cfg);
         $idxPath    = $twig->getCompileIndexPath();

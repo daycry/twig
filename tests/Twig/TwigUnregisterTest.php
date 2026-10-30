@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Twig;
 
-use CodeIgniter\Test\CIUnitTestCase;
-use Daycry\Twig\Twig;
-use Twig\Error\RuntimeError;
+use Daycry\Twig\CodeIgniter4\Twig;
+use Tests\Support\TestCase as CIUnitTestCase;
+use Twig\Error\SyntaxError;
 use Twig\Extension\StringLoaderExtension;
 
 /**
@@ -16,7 +16,7 @@ final class TwigUnregisterTest extends CIUnitTestCase
 {
     public function testUnregisterFunction(): void
     {
-        $cfg        = new \Daycry\Twig\Config\Twig();
+        $cfg        = new \Daycry\Twig\CodeIgniter4\Config\Twig();
         $cfg->paths = [__DIR__ . '/../_support/Templates'];
         $twig       = new Twig($cfg);
         $called     = 0;
@@ -32,13 +32,14 @@ final class TwigUnregisterTest extends CIUnitTestCase
         $this->assertTrue($twig->unregisterFunction('temp_fn'));
         // Re-create environment and ensure function no longer exists
         $twig->getTwig();
-        $this->expectException(RuntimeError::class);
+        $this->expectException(SyntaxError::class);
+        $this->expectExceptionMessage('Unknown "temp_fn" function');
         $twig->createTemplate('{{ temp_fn() }}');
     }
 
     public function testUnregisterFilter(): void
     {
-        $cfg        = new \Daycry\Twig\Config\Twig();
+        $cfg        = new \Daycry\Twig\CodeIgniter4\Config\Twig();
         $cfg->paths = [__DIR__ . '/../_support/Templates'];
         $twig       = new Twig($cfg);
         $twig->registerFilter('brackets', static fn ($s) => '[' . $s . ']');
@@ -47,13 +48,14 @@ final class TwigUnregisterTest extends CIUnitTestCase
         $this->assertSame('[ok]', trim((string) $out));
         $this->assertTrue($twig->unregisterFilter('brackets'));
         $twig->getTwig();
-        $this->expectException(RuntimeError::class);
+        $this->expectException(SyntaxError::class);
+        $this->expectExceptionMessage('Unknown "brackets" filter');
         $twig->createTemplate("{{ 'ok'|brackets }}");
     }
 
     public function testUnregisterExtension(): void
     {
-        $cfg        = new \Daycry\Twig\Config\Twig();
+        $cfg        = new \Daycry\Twig\CodeIgniter4\Config\Twig();
         $cfg->paths = [__DIR__ . '/../_support/Templates'];
         $twig       = new Twig($cfg);
         // use core debug extension dynamically as test (not in default list when production?)
@@ -64,6 +66,6 @@ final class TwigUnregisterTest extends CIUnitTestCase
         $twig->getTwig();
         // Extension should be gone; registering again should succeed without exception
         $twig->registerExtension(StringLoaderExtension::class);
-        $this->assertTrue(true);
+        $this->assertTrue($twig->getTwig()->hasExtension(StringLoaderExtension::class));
     }
 }

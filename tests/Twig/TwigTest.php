@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Twig;
 
-use CodeIgniter\Test\CIUnitTestCase;
-use Daycry\Twig\Config\Services;
-use Daycry\Twig\Config\Twig as TwigConfig;
-use Daycry\Twig\Twig;
+use Daycry\Twig\CodeIgniter4\Config\Services;
+use Daycry\Twig\CodeIgniter4\Config\Twig as TwigConfig;
+use Daycry\Twig\CodeIgniter4\Twig;
+use ReflectionProperty;
 use stdClass;
 use Tests\Support\Extensions\TwigCustomExtension;
 use Tests\Support\Filters\CustomFilter;
-use Twig\Environment;
+use Tests\Support\TestCase as CIUnitTestCase;
 
 /**
  * @internal
@@ -36,22 +36,15 @@ final class TwigTest extends CIUnitTestCase
         $this->twig = new Twig($this->config);
     }
 
-    public static function setUpBeforeClass(): void
-    {
-        parent::setUpBeforeClass();
-    }
-
     public function testConstructDefault()
     {
         $this->twig = new Twig();
 
-        $this->assertInstanceOf(Environment::class, $this->twig->getTwig());
         $this->assertCount(1, $this->twig->getPaths());
     }
 
     public function testConstructCustomConfig()
     {
-        $this->assertInstanceOf(Environment::class, $this->twig->getTwig());
         $this->assertCount(2, $this->twig->getPaths());
     }
 
@@ -59,7 +52,6 @@ final class TwigTest extends CIUnitTestCase
     {
         $this->twig = Services::twig(null, false);
 
-        $this->assertInstanceOf(Environment::class, $this->twig->getTwig());
         $this->assertCount(1, $this->twig->getPaths());
     }
 
@@ -67,7 +59,6 @@ final class TwigTest extends CIUnitTestCase
     {
         $this->twig = Services::twig($this->config, false);
 
-        $this->assertInstanceOf(Environment::class, $this->twig->getTwig());
         $this->assertCount(2, $this->twig->getPaths());
     }
 
@@ -75,7 +66,6 @@ final class TwigTest extends CIUnitTestCase
     {
         $this->twig = twig_instance();
 
-        $this->assertInstanceOf(Environment::class, $this->twig->getTwig());
         $this->assertCount(1, $this->twig->getPaths());
     }
 
@@ -135,18 +125,18 @@ final class TwigTest extends CIUnitTestCase
             'name' => 'CodeIgniter',
         ];
 
-        $this->assertFalse($this->getPrivateProperty($this->twig, 'functions_added'));
+        $this->assertFalse((new ReflectionProperty(\Daycry\Twig\Twig::class, 'functions_added'))->getValue($this->twig));
 
         $output = $this->twig->render('welcome', $data);
 
         $this->assertSame("Hello CodeIgniter!\n", $output);
-        $this->assertTrue($this->getPrivateProperty($this->twig, 'functions_added'));
+        $this->assertTrue((new ReflectionProperty(\Daycry\Twig\Twig::class, 'functions_added'))->getValue($this->twig));
 
         // Calls render() twice
         $output = $this->twig->render('welcome', $data);
 
         $this->assertSame("Hello CodeIgniter!\n", $output);
-        $this->assertTrue($this->getPrivateProperty($this->twig, 'functions_added'));
+        $this->assertTrue((new ReflectionProperty(\Daycry\Twig\Twig::class, 'functions_added'))->getValue($this->twig));
     }
 
     public function testFunctionAsIs()

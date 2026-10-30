@@ -1,0 +1,26 @@
+{
+    "name": "tests/twig-codeigniter-consumer",
+    "require": {
+        "daycry/twig": "^4.0",
+        "codeigniter4/framework": "^4.7"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../../..",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "daycry/twig": "4.0.0"
+                },
+                "reference": "config"
+            }
+        }
+    ],
+    "config": {
+        "platform": {
+            "php": "8.2.0"
+        },
+        "allow-plugins": false
+    }
+}

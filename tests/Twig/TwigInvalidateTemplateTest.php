@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Twig;
 
-use CodeIgniter\Test\CIUnitTestCase;
-use Daycry\Twig\Config\Twig as TwigConfig;
-use Daycry\Twig\Twig;
+use Daycry\Twig\CodeIgniter4\Config\Twig as TwigConfig;
+use Daycry\Twig\CodeIgniter4\Twig;
+use Tests\Support\TestCase as CIUnitTestCase;
 use Twig\Loader\ArrayLoader;
 
 /**
@@ -31,13 +31,8 @@ final class TwigInvalidateTemplateTest extends CIUnitTestCase
             $this->markTestSkipped('Filesystem cache disabled (CI cache backend auto-detected).');
         }
 
-        // Simulate absence of an actual compiled file by creating a fake one matching pattern
-        $hash  = md5('temp.twig');
-        $dummy = $cacheDir . DIRECTORY_SEPARATOR . $hash . '.php';
-        if (! is_dir($cacheDir)) {
-            @mkdir($cacheDir, 0775, true);
-        }
-        file_put_contents($dummy, '<?php // compiled');
+        $environment = $twig->getTwig();
+        $dummy       = $environment->getCache(false)->generateKey('temp.twig', $environment->getTemplateClass('temp.twig'));
         $this->assertFileExists($dummy);
 
         $removed = $twig->invalidateTemplate('temp');

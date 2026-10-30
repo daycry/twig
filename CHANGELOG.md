@@ -4,12 +4,41 @@ All notable changes to this project will be documented in this file. The
 format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased] - 4.0
+
+### Added
+- Standalone `Daycry\Twig\Configuration` and renderer without a CodeIgniter runtime dependency.
+- Optional CodeIgniter 4 adapter under `src/Adapter/CodeIgniter4`, included in the same `daycry/twig` package.
+- Independent standalone tests and isolated Composer consumer checks.
+- Shared atomic JSON state repository and deployment-versioned discovery snapshots.
+
+### Changed
+- CodeIgniter classes move to `Daycry\Twig\CodeIgniter4`; see `docs/MIGRATION.md`.
+- Twig 3.30 is now the minimum supported version; PHP remains 8.2+.
+- Remote compiled cache clearing rotates generations with bounded entry retention.
+- Deptrac uses the maintained `deptrac/deptrac` package and checks core/adapter boundaries.
+
+### Fixed
+- Invalidate real Twig cache artifacts instead of guessed MD5 filenames.
+- Initialize discovery before warming all templates on a fresh renderer.
+- Reuse saved render parameters and clear temporary context after errors.
+- Detect nested template additions/removals and avoid writes on discovery hits.
+- Scope compile-index loading per instance and share the resolved manager with invalidation.
+- Compile actual source on forced warmup and emit one notification per operation.
+- Skip debug-toolbar service lookups in production.
+- Preserve globals and dynamic functions/filters across environment resets.
+- Refresh loaded template classes and includes after whole-cache reinitialization.
+- Share remote generation lookups within a render and detect external worker invalidation.
+- Keep filesystem generation changes visible to new renderers in the same worker.
+- Warm shared artifacts after resets and invalidate the active backend generation.
+- Move metadata when enabling a new cache directory and delegate Spark diagnostic reset to the configured backend.
+
+## Previous 3.x development changes
 
 ### Added
 - **PSR-3 logger injection.** Pass an optional `Psr\Log\LoggerInterface` to the
   `Twig` constructor (or `setLogger()` later) to redirect structured log output
-  to monolog/syslog/etc. When unset the library still falls back to the
+  to another PSR-3 logger. When unset the library still falls back to the
   CodeIgniter `log_message()` helper.
 - **`twig:lint`** CLI command. Validates Twig syntax without rendering — wraps
   `Environment::tokenize()` + `parse()` so it is safe in CI/CD.
