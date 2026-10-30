@@ -1,5 +1,7 @@
 # Daycry Twig documentation
 
+**Online documentation:** <https://daycry.github.io/twig/>
+
 Daycry Twig provides a standalone rendering toolkit and an optional CodeIgniter 4
 adapter. Both Composer packages are developed in this repository. The adapter
 is exported from `packages/codeigniter4` to its distribution repository.
@@ -19,6 +21,9 @@ installation guide also covers local development from the source checkout.
 | Diagnose installation, rendering or cache problems | [Troubleshooting](TROUBLESHOOTING.md) |
 | Export the adapter and publish matching package versions | [Release procedure](RELEASING.md) |
 
-For a quick API overview, see the [project README](../README.md). Contributors
-should use [CONTRIBUTING.md](../CONTRIBUTING.md); changes to either package belong
+For a quick API overview, see the [project README](https://github.com/daycry/twig/blob/master/README.md). Contributors
+should use [CONTRIBUTING.md](https://github.com/daycry/twig/blob/master/CONTRIBUTING.md); changes to either package belong
 in this source repository. The adapter distribution is generated from it.
+
+The site is built from this folder with MkDocs Material and deployed from
+`master`. See [SITE.md](SITE.md) for local builds and publishing.

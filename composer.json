@@ -97,7 +97,10 @@
             "/.codex/",
             "/.vscode/",
             "/docs/roadmap/",
-            "/phpcpd.phar"
+            "/phpcpd.phar",
+            "/mkdocs.yml",
+            "/docs/requirements.txt",
+            "/docs/requirements.in"
         ]
     }
 }

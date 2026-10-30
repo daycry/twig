@@ -1,9 +1,35 @@
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate?business=SYC5XDT23UZ5G&no_recurring=0&item_name=Thank+you%21&currency_code=EUR)
+
 # Daycry Twig: standalone PHP templates with an optional CodeIgniter 4 adapter
 
+[![PHP Tests](https://github.com/daycry/twig/actions/workflows/phpunit.yml/badge.svg?branch=master)](https://github.com/daycry/twig/actions/workflows/phpunit.yml)
+[![PHPStan](https://github.com/daycry/twig/actions/workflows/phpstan.yml/badge.svg?branch=master)](https://github.com/daycry/twig/actions/workflows/phpstan.yml)
+[![Code Style](https://github.com/daycry/twig/actions/workflows/phpcsfixer.yml/badge.svg?branch=master)](https://github.com/daycry/twig/actions/workflows/phpcsfixer.yml)
+[![Rector](https://github.com/daycry/twig/actions/workflows/rector.yml/badge.svg?branch=master)](https://github.com/daycry/twig/actions/workflows/rector.yml)
+[![PHPCPD](https://github.com/daycry/twig/actions/workflows/phpcpd.yml/badge.svg?branch=master)](https://github.com/daycry/twig/actions/workflows/phpcpd.yml)
+[![Architecture](https://github.com/daycry/twig/actions/workflows/deptrac.yml/badge.svg?branch=master)](https://github.com/daycry/twig/actions/workflows/deptrac.yml)
+[![Documentation build](https://github.com/daycry/twig/actions/workflows/docs.yml/badge.svg?branch=master)](https://github.com/daycry/twig/actions/workflows/docs.yml)
+[![Coverage](https://coveralls.io/repos/github/daycry/twig/badge.svg?branch=master)](https://coveralls.io/github/daycry/twig?branch=master)
+[![PHP](https://img.shields.io/packagist/dependency-v/daycry/twig/php?color=blue)](https://packagist.org/packages/daycry/twig)
+[![Core version](https://img.shields.io/packagist/v/daycry/twig?label=core)](https://packagist.org/packages/daycry/twig)
+[![CI4 adapter version](https://img.shields.io/packagist/v/daycry/twig-codeigniter4?label=CI4%20adapter)](https://packagist.org/packages/daycry/twig-codeigniter4)
+[![Downloads](https://img.shields.io/packagist/dt/daycry/twig)](https://packagist.org/packages/daycry/twig)
+[![Monthly downloads](https://img.shields.io/packagist/dm/daycry/twig)](https://packagist.org/packages/daycry/twig)
+[![GitHub stars](https://img.shields.io/github/stars/daycry/twig)](https://github.com/daycry/twig/stargazers)
+[![License](https://img.shields.io/github/license/daycry/twig)](https://github.com/daycry/twig/blob/master/LICENSE.md)
+[![Documentation](https://img.shields.io/badge/docs-daycry.github.io%2Ftwig-blue?logo=materialformkdocs&logoColor=white)](https://daycry.github.io/twig/)
+
+**Documentation:** <https://daycry.github.io/twig/>
+
 Render Twig templates in standalone PHP applications or through the optional
-CodeIgniter 4 adapter. The toolkit adds template discovery, cache warmup,
-invalidation, diagnostics and PSR-3 logging. Requires PHP **8.2+** and Twig
-**3.30+**; framework integration requires CodeIgniter **4.7+**.
+CodeIgniter 4 adapter. Requires PHP **8.2+** and Twig **3.30+**; framework
+integration requires CodeIgniter **4.7+**.
+
+- Standalone rendering with explicit configuration and native Twig loaders.
+- Optional CodeIgniter services, helpers, Spark commands and debug toolbar.
+- Template discovery, source warmup and targeted or whole-cache invalidation.
+- Filesystem and remote cache lifecycle support for persistent workers.
+- Diagnostics, rendering profiles and optional PSR-3 logging.
 
 Version **4.0** separates the standalone core from the CodeIgniter adapter.
 Configuration and framework namespaces change; see

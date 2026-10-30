@@ -1,5 +1,10 @@
 # Daycry Twig: template rendering and framework services for CodeIgniter 4
 
+[![Version](https://img.shields.io/packagist/v/daycry/twig-codeigniter4)](https://packagist.org/packages/daycry/twig-codeigniter4)
+[![Documentation](https://img.shields.io/badge/docs-daycry.github.io%2Ftwig-blue)](https://daycry.github.io/twig/)
+
+**Documentation:** <https://daycry.github.io/twig/>
+
 CodeIgniter 4 services, configuration, helpers, Spark commands, cache-service
 integration and optional debug toolbar for the standalone `daycry/twig` core.
 Requires PHP 8.2+, CodeIgniter 4.7+ and daycry/twig 4.0.

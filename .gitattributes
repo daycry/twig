@@ -17,3 +17,7 @@
 /phpunit.standalone.xml.dist export-ignore
 /rector.php export-ignore
 /deptrac.yaml export-ignore
+
+/mkdocs.yml export-ignore
+/docs/requirements.txt export-ignore
+/docs/requirements.in export-ignore

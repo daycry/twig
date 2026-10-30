@@ -1,0 +1,114 @@
+site_name: Daycry Twig for PHP and CodeIgniter 4
+site_description: Standalone PHP template rendering, cache warmup, discovery and diagnostics with an optional CodeIgniter 4 adapter.
+site_author: Daycry
+site_url: https://daycry.github.io/twig/
+repo_url: https://github.com/daycry/twig
+repo_name: daycry/twig
+edit_uri: edit/master/docs/
+copyright: Copyright &copy; 2026 Daycry
+docs_dir: docs
+site_dir: build/docs-site
+
+theme:
+  name: material
+  language: en
+  icon:
+    repo: fontawesome/brands/github
+  font:
+    text: Inter
+    code: JetBrains Mono
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.instant
+    - navigation.tracking
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.action.edit
+    - content.action.view
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+      extend_pygments_lang:
+        - name: php
+          lang: php
+          options:
+            startinline: true
+  - pymdownx.tabbed:
+      alternate_style: true
+
+validation:
+  nav:
+    omitted_files: warn
+  links:
+    not_found: warn
+    anchors: warn
+    absolute_links: warn
+    unrecognized_links: warn
+
+exclude_docs: |
+  /README.md
+  /roadmap/
+  /requirements.txt
+  /requirements.in
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/daycry/twig
+    - icon: fontawesome/brands/php
+      link: https://packagist.org/packages/daycry/twig
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: INSTALLATION.md
+      - Migration from 3.x: MIGRATION.md
+  - Guides:
+      - Services and extension points: SERVICES.md
+      - Cache lifecycle: CACHING.md
+      - Performance: PERFORMANCE.md
+      - Diagnostics and toolbar: DIAGNOSTICS_REFERENCE.md
+      - Troubleshooting: TROUBLESHOOTING.md
+  - Maintenance:
+      - Publishing packages: RELEASING.md
+      - Documentation site: SITE.md
+  - Changelog: https://github.com/daycry/twig/blob/master/CHANGELOG.md

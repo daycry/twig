@@ -51,7 +51,7 @@ provide a writable cache path when enabling it. HTML escaping is enabled.
 `saveData` defaults to true, so render parameters remain available to later
 renders on that instance. Set it to false for independent contexts and scope the
 renderer to its request or job. Native Twig loaders work through `withLoader()`;
-see the [README examples](../README.md#standalone-php).
+see the [README examples](https://github.com/daycry/twig/blob/master/README.md#standalone-php).
 
 ## CodeIgniter 4
 
