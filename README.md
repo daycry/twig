@@ -5,8 +5,9 @@ CodeIgniter 4 adapter. The toolkit adds template discovery, cache warmup,
 invalidation, diagnostics and PSR-3 logging. Requires PHP **8.2+** and Twig
 **3.30+**; framework integration requires CodeIgniter **4.7+**.
 
-This source tree targets the next major release, **4.0**. Configuration and
-framework namespaces change; see [the migration guide](docs/MIGRATION.md).
+Version **4.0** separates the standalone core from the CodeIgniter adapter.
+Configuration and framework namespaces change; see
+[the migration guide](docs/MIGRATION.md) before upgrading from 3.x.
 
 Both packages are developed in this repository:
 
@@ -21,7 +22,7 @@ here. See [the release procedure](docs/RELEASING.md).
 
 ## Installation
 
-After the coordinated 4.0 releases are published:
+Install the package for your application:
 
 ```bash
 # Standalone PHP
@@ -32,7 +33,7 @@ composer require daycry/twig-codeigniter4:^4.0
 ```
 
 The core does not install CodeIgniter. See the [installation guide](docs/INSTALLATION.md)
-for requirements, first templates and local development before publication.
+for requirements, first templates and local development from the checkout.
 
 ## Standalone PHP
 

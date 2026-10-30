@@ -67,6 +67,6 @@ during deployment. This avoids
 retaining legacy index keys or remote payloads. Treat cache storage as dedicated
 to Twig; do not place application data inside its configured cache directory.
 
-The versioned installation examples apply after both 4.0 packages are published.
-The core keeps its existing Packagist entry; the adapter has a separate entry.
+The 4.0 packages are distributed separately. The core keeps its existing
+Packagist entry; the adapter has its own entry.
 See [RELEASING.md](RELEASING.md) for the distribution and registration procedure.

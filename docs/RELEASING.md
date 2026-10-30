@@ -6,8 +6,8 @@ The adapter distribution repository is `daycry/twig-codeigniter4`, generated fro
 that directory. Submit code changes to the source repository, then export them;
 editing the generated distribution would lose those edits on the next export.
 
-Version 4.0 is currently unreleased. Preparing or updating the distribution
-repository does not create a stable release.
+Preparing or updating the distribution repository does not create a stable
+release. A release needs matching tags and publication checks for both packages.
 
 ## Validate the source
 
@@ -56,7 +56,8 @@ once at https://packagist.org/packages/submit using the public repository URL
 both entries. Registering a package or pushing `main` exposes development versions;
 a stable install requires suitable version tags.
 
-After release approval, use matching `v4.0.0` tags for the first coordinated release.
+After release approval, publish matching version tags for both packages. The
+commands below show `v4.0.0`; substitute the next version for later releases.
 Publish the core first, then the adapter, whose manifest requires core `^4.0`.
 The following commands assume the tested source and mirror have been prepared:
 

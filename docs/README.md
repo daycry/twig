@@ -4,9 +4,9 @@ Daycry Twig provides a standalone rendering toolkit and an optional CodeIgniter 
 adapter. Both Composer packages are developed in this repository. The adapter
 is exported from `packages/codeigniter4` to its distribution repository.
 
-The current source targets version **4.0**, which changes framework namespaces.
-The versioned installation commands apply after the coordinated packages are
-published; the installation guide also covers local development.
+Version **4.0** changes framework namespaces. Use the installation guide for
+new applications and the migration guide when upgrading from 3.x. The
+installation guide also covers local development from the source checkout.
 
 | Task | Guide |
 |---|---|

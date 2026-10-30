@@ -4,7 +4,7 @@ CodeIgniter 4 services, configuration, helpers, Spark commands, cache-service
 integration and optional debug toolbar for the standalone `daycry/twig` core.
 Requires PHP 8.2+, CodeIgniter 4.7+ and daycry/twig 4.0.
 
-After the coordinated 4.0 releases are published:
+Install with Composer:
 
 ```bash
 composer require daycry/twig-codeigniter4:^4.0
@@ -29,3 +29,5 @@ Submit changes to the source repository. See the
 [installation guide](https://github.com/daycry/twig/blob/master/docs/INSTALLATION.md),
 [migration guide](https://github.com/daycry/twig/blob/master/docs/MIGRATION.md) and
 [release procedure](https://github.com/daycry/twig/blob/master/docs/RELEASING.md).
+
+See [CHANGELOG.md](CHANGELOG.md) for package release notes.

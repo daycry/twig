@@ -12,9 +12,9 @@ The core does not require or load CodeIgniter. Both packages are developed here;
 the adapter source is in `packages/codeigniter4` and its distribution is exported
 when publishing. See [RELEASING.md](RELEASING.md) for maintainers' instructions.
 
-The current source targets **4.0**, which is unreleased. Use the tagged commands
-below after both packages have been published, or the local path setup at the
-end of this guide while developing against the checkout.
+Use the stable **4.0** packages below. For development against the source
+checkout, use the local path setup at the end of this guide. Applications
+upgrading from 3.x should also follow [MIGRATION.md](MIGRATION.md).
 
 ## Standalone PHP
 
@@ -85,7 +85,7 @@ Register `Daycry\Twig\CodeIgniter4\Debug\Toolbar\Collectors\Twig` in your
 application's toolbar collectors to enable its panel. Diagnostics and optional
 panels are described in the [diagnostics reference](DIAGNOSTICS_REFERENCE.md).
 
-## Local development before publication
+## Local development from the checkout
 
 The examples below assume the application and source checkout are sibling
 directories and the checkout is named `twig`. Add path repositories to the
