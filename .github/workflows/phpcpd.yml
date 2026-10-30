@@ -33,4 +33,4 @@ jobs:
           coverage: none
 
       - name: Detect duplicate code
-        run: phpcpd src/ tests/
+        run: phpcpd src/ packages/codeigniter4/src/ tests/

@@ -37,6 +37,7 @@
 	<source>
         <include>
 			<directory suffix=".php">./src</directory>
+            <directory suffix=".php">./packages/codeigniter4/src</directory>
 		</include>
         <exclude>
 			<directory suffix=".php">./src/Commands</directory>

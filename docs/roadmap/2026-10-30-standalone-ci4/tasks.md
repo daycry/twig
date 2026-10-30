@@ -8,7 +8,7 @@ verificacion: obligatoria
 > **Ledger canónico** de progreso. User authorization: implement the audit improvements
 as a standalone Twig library and optional CodeIgniter 4 integration. The user also
 requires no references to unrelated libraries in the implementation or docs.
-The standalone core and included adapter target version 4.0. The user subsequently clarified that distribution must remain one Composer package and authorized pushing the code; creating releases remains out of scope.
+The core and adapter target version 4.0. The final user clarification requires two Composer/Packagist packages developed in this source repository, with a generated adapter distribution mirror. T-06 records a superseded interpretation; T-07 records the final correction. Creating stable release tags remains out of scope.
 
 ## Resumen de progreso
 
@@ -19,7 +19,7 @@ The standalone core and included adapter target version 4.0. The user subsequent
 
 | Fase | Completadas | Total |
 |---|---|---|
-| Fase 1 | 6 | 6 |
+| Fase 1 | 7 | 7 |
 
 ## Fase 1 — Implementation
 
@@ -77,6 +77,17 @@ The standalone core and included adapter target version 4.0. The user subsequent
 - [x] Keep one public Composer package and repository, preserve standalone installation without CodeIgniter, and discover the included adapter in CI4 applications.
 - [x] Prepare the validated code for upload to the existing GitHub repository.
 - **Notas**: Explicit user clarification supersedes the earlier two-package interpretation. The adapter namespace remains Daycry\Twig\CodeIgniter4 with an explicit production PSR-4 prefix for framework discovery. Consumer path repositories hash their configuration so autoload metadata refreshes before a Git commit. Both isolated consumers passed after this correction.
+
+### T-07 — Publish two packages from one development repository
+- **Estado**: completado
+- **Archivos**: `src/**`, `packages/**`, `composer.json`, `.gitattributes`, `tests/**`, `.github/workflows/**`, `.php-cs-fixer.dist.php`, `phpstan.neon.dist`, `rector.php`, `deptrac.yaml`, `phpunit*.xml*`, `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `docs/**`
+- **Verificacion**: `composer ci`: exit 0; 137 tests / 296 assertions, PHPStan clean, no clones, Deptrac 0 violations. Both isolated consumers passed on PHP 8.2.13, 8.3.30, 8.4.18 and 8.5.12. Git archives checked: core 58 entries, adapter 36 entries, manifests/source/README/license and exclusions verified (Git newline normalization accounted for).
+- **Changelog**: Maintain standalone core and optional CI4 adapter as two Composer packages in one source repository; export the adapter with git subtree split.
+**Criterios de aceptación**:
+- [x] Provide separate core and adapter manifests and isolated consumer dependency graphs.
+- [x] Exclude the adapter and development state from core distributions; ship adapter README and license.
+- [x] Document and prepare the generated adapter mirror and Packagist registration without creating stable version tags.
+- **Notas**: Explicit final user instruction supersedes the T-06 single-package interpretation. Runtime namespaces and implementation remain unchanged. Source checks pass before exporting the tested source tree. The public adapter distribution repository has been created; the source upload and mirror export follow this commit. Stable tags are not created by this setup.
 
 ## Revisión de dos lentes — intento 1: implementación — corregido
 
@@ -171,3 +182,19 @@ suite passes. Adapter service/helper/Spark discovery and reset command also pass
 in the isolated single-package consumer on all four supported PHP versions.
 No additional Composer package, repository, tag or release is required for this
 layout. The requested Git upload is performed after recording this evidence.
+
+## Final two-package verification
+
+- Both Composer manifests validate; production core autoload has no adapter prefix.
+- The standalone consumer explicitly rejects an installed/exposed adapter. The
+  integration consumer requires the separate adapter package and verifies real
+  service/helper/Spark discovery and diagnostic reset.
+- Full `composer ci` passes after relocating the adapter. No runtime implementation
+  or namespace changes were needed for this packaging correction.
+- Git archive checks verified the core excludes packages, dependencies, tests and
+  local state; adapter distribution contains its own manifest, source, README and
+  license. Source bytes match after normalizing Git's line endings.
+- The adapter mirror was created at https://github.com/daycry/twig-codeigniter4.
+  It is generated from packages/codeigniter4; development stays in this repository.
+- Packagist registration and stable version tags are distinct from the source export.
+  The release guide describes the coordinated publication procedure.

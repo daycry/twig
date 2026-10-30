@@ -30,7 +30,7 @@ final class TwigTest extends TestCase
 
     public function testTwigViewPartialExists(): void
     {
-        $this->assertFileExists(dirname(__DIR__, 2) . '/src/Adapter/CodeIgniter4/Debug/Toolbar/Views/_twig.tpl');
+        $this->assertFileExists(dirname(__DIR__, 2) . '/packages/codeigniter4/src/Debug/Toolbar/Views/_twig.tpl');
     }
 
     public function testDiagnosticsStructure(): void

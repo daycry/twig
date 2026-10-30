@@ -2,8 +2,9 @@
 
 ## Framework classes are missing after upgrading
 
-Version 4 includes CodeIgniter integration in `src/Adapter/CodeIgniter4` within
-`daycry/twig`. Update namespaces using [MIGRATION.md](MIGRATION.md). The core
+Version 4 provides CodeIgniter integration through `daycry/twig-codeigniter4`,
+developed in `packages/codeigniter4` in the source repository. Install the adapter
+and update namespaces using [MIGRATION.md](MIGRATION.md). The core
 `Daycry\Twig\Twig` deliberately does not load framework helpers or resolve services.
 
 ## Standalone templates cannot be found

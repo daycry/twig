@@ -8,7 +8,7 @@ the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 - Standalone `Daycry\Twig\Configuration` and renderer without a CodeIgniter runtime dependency.
-- Optional CodeIgniter 4 adapter under `src/Adapter/CodeIgniter4`, included in the same `daycry/twig` package.
+- Optional `daycry/twig-codeigniter4` package under `packages/codeigniter4`, developed alongside the core and exported for distribution.
 - Independent standalone tests and isolated Composer consumer checks.
 - Shared atomic JSON state repository and deployment-versioned discovery snapshots.
 

@@ -32,14 +32,14 @@
     "prefer-stable": true,
     "autoload": {
         "psr-4": {
-            "Daycry\\Twig\\": "src/",
-            "Daycry\\Twig\\CodeIgniter4\\": "src/Adapter/CodeIgniter4/"
+            "Daycry\\Twig\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
             "Tests\\": "tests/",
-            "Tests\\Support\\": "tests/_support"
+            "Tests\\Support\\": "tests/_support",
+            "Daycry\\Twig\\CodeIgniter4\\": "packages/codeigniter4/src/"
         },
         "files": [
             "tests/_support/Functions/twigFunctions.php"
@@ -67,7 +67,7 @@
             "php-cs-fixer fix --ansi --verbose --diff"
         ],
         "style": "@cs-fix",
-        "deduplicate": "php phpcpd.phar src/",
+        "deduplicate": "php phpcpd.phar src/ packages/codeigniter4/src/",
         "mutate": "infection --threads=2 --skip-initial-tests --coverage=build/phpunit",
         "test": [
             "@test:standalone",
@@ -83,10 +83,11 @@
         }
     },
     "suggest": {
-        "codeigniter4/framework": "Optional framework integration through the included CodeIgniter 4 adapter (^4.7)"
+        "daycry/twig-codeigniter4": "CodeIgniter 4 services, configuration, Spark commands, helpers, cache adapter and toolbar integration"
     },
     "archive": {
         "exclude": [
+            "/packages/",
             "/vendor/",
             "/composer.lock",
             "/build/",
@@ -94,7 +95,9 @@
             "/.github/",
             "/.claude/",
             "/.codex/",
-            "/.vscode/"
+            "/.vscode/",
+            "/docs/roadmap/",
+            "/phpcpd.phar"
         ]
     }
 }

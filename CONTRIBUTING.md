@@ -47,7 +47,7 @@ same on PHP 8.2, 8.3, 8.4 and 8.5.
 - Prefer interfaces from `Daycry\Twig\Contracts\` for new dependencies — keeps
   things mockable in tests.
 - Core code in `src/` must not resolve framework services or depend on framework
-  constants. Keep CI4-specific behavior under `src/Adapter/CodeIgniter4/`.
+  constants. Keep CI4-specific behavior under `packages/codeigniter4/src/`.
 - Consumer fixtures under `tests/Consumers` install their own runtime dependencies;
   their `vendor/` and generated `writable/` directories are not analysis input.
 - New persisted JSON shapes go through `Daycry\Twig\Support\PersistenceDecoder`
@@ -64,3 +64,6 @@ same on PHP 8.2, 8.3, 8.4 and 8.5.
 
 Do **not** open a public GitHub issue for security findings. Email the
 maintainer (see `composer.json` authors) and allow time for a coordinated fix.
+
+Both packages are developed here. Export the adapter for distribution using
+[the release procedure](docs/RELEASING.md); make changes in this source repository.

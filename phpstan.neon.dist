@@ -3,6 +3,7 @@ parameters:
     level: 5
     paths:
         - src/
+        - packages/codeigniter4/src/
         - tests/
     bootstrapFiles:
         - tests/bootstrap.php

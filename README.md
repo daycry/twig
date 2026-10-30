@@ -6,22 +6,31 @@ PHP **8.2+**, with an optional CodeIgniter **4.7+** adapter. Requires Twig **3.3
 This source tree targets the next major release, **4.0**. Configuration and
 framework namespaces change; see [the migration guide](docs/MIGRATION.md).
 
-A single Composer package, `daycry/twig`, contains the standalone core and the
-optional CodeIgniter 4 adapter in `src/Adapter/CodeIgniter4`. The core has no
-CodeIgniter runtime dependency. Applications using the adapter supply the
-framework themselves (CodeIgniter **4.7+**).
+Both packages are developed in this repository:
+
+| Package | Purpose |
+|---|---|
+| `daycry/twig` | Framework-independent renderer, configuration, discovery, warmup and cache lifecycle |
+| `daycry/twig-codeigniter4` | Optional CodeIgniter 4 services, helpers, Spark commands, cache adapter and toolbar |
+
+The adapter source lives in `packages/codeigniter4`. Its distribution repository
+is generated from that directory with `git subtree split`; development stays
+here. See [the release procedure](docs/RELEASING.md).
 
 ## Installation
 
-After version 4.0 is published:
+After the coordinated 4.0 releases are published:
 
 ```bash
+# Standalone PHP
 composer require daycry/twig:^4.0
+
+# CodeIgniter 4 (also installs the core and framework dependency)
+composer require daycry/twig-codeigniter4:^4.0
 ```
 
-The same package serves standalone PHP and CodeIgniter applications. CodeIgniter
-is suggested, not installed automatically. For local development, see the path
-repositories in `tests/Consumers`.
+The core does not install CodeIgniter. For local development before publication,
+see the path repositories in `tests/Consumers`.
 
 ## Standalone PHP
 

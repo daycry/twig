@@ -24,6 +24,7 @@ return static function (RectorConfig $rectorConfig): void {
 
     $rectorConfig->paths([
         __DIR__ . '/src/',
+        __DIR__ . '/packages/codeigniter4/src/',
         __DIR__ . '/tests/Standalone/',
         __DIR__ . '/tests/Twig/',
         __DIR__ . '/tests/Collectors/',

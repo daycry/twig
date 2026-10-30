@@ -1,9 +1,9 @@
 # Migrating from 3.x to 4.0
 
-Version 4.0 keeps a single `daycry/twig` package with a standalone core and an
-optional CodeIgniter 4 adapter in `src/Adapter/CodeIgniter4`. This is a major
-release because framework classes move namespaces. PHP remains **8.2+**; the
-minimum Twig version becomes **3.30** for native removable cache behavior.
+Version 4.0 introduces a standalone core and a separately installable CodeIgniter
+4 adapter. Both are developed in this repository; the adapter source is in
+`packages/codeigniter4`. Framework classes move namespaces, so this is a major
+release. PHP remains **8.2+**; Twig **3.30+** provides native removable cache behavior.
 
 ## Standalone applications
 
@@ -14,9 +14,9 @@ framework services or depend on `APPPATH`, `WRITEPATH` or `ENVIRONMENT`.
 
 ## CodeIgniter applications
 
-Upgrade `daycry/twig` to `^4.0` and keep `codeigniter4/framework:^4.7` in your
-application dependencies. The adapter is included in the same package; there is
-no second package to install.
+Install `daycry/twig-codeigniter4:^4.0`. It requires `daycry/twig:^4.0` and
+`codeigniter4/framework:^4.7`. Both packages are maintained in this source repository;
+the adapter is exported to its distribution repository when publishing.
 
 Update imports and application configuration:
 
@@ -64,5 +64,6 @@ during deployment. This avoids
 retaining legacy index keys or remote payloads. Treat cache storage as dedicated
 to Twig; do not place application data inside its configured cache directory.
 
-The versioned installation examples apply after version 4.0 is published.
-The existing `daycry/twig` Packagist entry serves both usage modes.
+The versioned installation examples apply after both 4.0 packages are published.
+The core keeps its existing Packagist entry; the adapter has a separate entry.
+See [RELEASING.md](RELEASING.md) for the distribution and registration procedure.

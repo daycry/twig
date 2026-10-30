@@ -26,13 +26,13 @@ implement Twig's removable cache interface for targeted invalidation. Implement
 `RefreshableCacheInterface` for distributed invalidation: the renderer refreshes
 it once per render/warmup operation and rebuilds loaded templates if it changed.
 
-The optional adapter is in `src/Adapter/CodeIgniter4`, under
+The optional adapter is in `packages/codeigniter4/src`, under
 `Daycry\Twig\CodeIgniter4`. Its configuration converts to the core configuration;
 its renderer subclasses the core to install helpers, logger, event notification,
 cache-service storage and debug toolbar behavior. Services, Spark commands,
 configuration publishing and the Viewable trait belong to this adapter only.
 
-The architecture check forbids dependencies from the core (excluding `src/Adapter/CodeIgniter4`) on framework or adapter
+The architecture check forbids dependencies from `src/` on framework or adapter
 classes. Consumer checks also install and execute the core without CodeIgniter.
 
 `Runtime\Environment` adds an isolated class revision after an explicit reset.

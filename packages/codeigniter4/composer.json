@@ -1,0 +1,17 @@
+{
+    "name": "daycry/twig-codeigniter4",
+    "description": "CodeIgniter 4 adapter for daycry/twig",
+    "type": "library",
+    "homepage": "https://github.com/daycry/twig-codeigniter4",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.2",
+        "daycry/twig": "^4.0",
+        "codeigniter4/framework": "^4.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "Daycry\\Twig\\CodeIgniter4\\": "src/"
+        }
+    }
+}

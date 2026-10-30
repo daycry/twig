@@ -8,6 +8,7 @@ $finder = Finder::create()
     ->files()
     ->in([
         __DIR__ . '/src/',
+        __DIR__ . '/packages/codeigniter4/src/',
         __DIR__ . '/tests/',
     ])
     ->exclude(['build', 'vendor', 'writable'])

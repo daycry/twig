@@ -1,10 +1,20 @@
 {
     "name": "tests/twig-codeigniter-consumer",
     "require": {
-        "daycry/twig": "^4.0",
-        "codeigniter4/framework": "^4.7"
+        "daycry/twig-codeigniter4": "^4.0"
     },
     "repositories": [
+        {
+            "type": "path",
+            "url": "../../../packages/codeigniter4",
+            "options": {
+                "symlink": true,
+                "reference": "config",
+                "versions": {
+                    "daycry/twig-codeigniter4": "4.0.0"
+                }
+            }
+        },
         {
             "type": "path",
             "url": "../../..",

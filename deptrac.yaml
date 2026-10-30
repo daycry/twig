@@ -1,6 +1,7 @@
 deptrac:
   paths:
     - ./src/
+    - ./packages/codeigniter4/src/
   layers:
     - name: Core
       collectors:
@@ -10,11 +11,11 @@ deptrac:
               value: src/.*
           must_not:
             - type: directory
-              value: src/Adapter/CodeIgniter4/.*
+              value: packages/codeigniter4/src/.*
     - name: Adapter
       collectors:
         - type: directory
-          value: src/Adapter/CodeIgniter4/.*
+          value: packages/codeigniter4/src/.*
     - name: Framework
       collectors:
         - type: classLike

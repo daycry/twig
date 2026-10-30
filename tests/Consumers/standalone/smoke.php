@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Composer\InstalledVersions;
+
 require __DIR__ . '/vendor/autoload.php';
 
 use CodeIgniter\CodeIgniter;
@@ -11,6 +13,9 @@ use Twig\Loader\ArrayLoader;
 
 if (class_exists(CodeIgniter::class) || function_exists('config') || defined('APPPATH')) {
     throw new RuntimeException('The standalone consumer must not load CodeIgniter.');
+}
+if (InstalledVersions::isInstalled('daycry/twig-codeigniter4') || class_exists(Daycry\Twig\CodeIgniter4\Twig::class)) {
+    throw new RuntimeException('The standalone package must not install or expose the adapter.');
 }
 $config            = new Configuration();
 $config->cachePath = __DIR__ . '/writable/cache';

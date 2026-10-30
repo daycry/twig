@@ -1,6 +1,8 @@
 <?php
 
 declare(strict_types=1);
+
+use Composer\InstalledVersions;
 use Daycry\Twig\CodeIgniter4\Twig;
 use Twig\Loader\ArrayLoader;
 
@@ -16,6 +18,9 @@ define('HOMEPATH', __DIR__ . '/');
 define('TESTPATH', __DIR__ . '/');
 require __DIR__ . '/vendor/codeigniter4/framework/system/Test/bootstrap.php';
 
+if (! InstalledVersions::isInstalled('daycry/twig-codeigniter4')) {
+    throw new RuntimeException('The integration consumer must install the separate adapter package.');
+}
 $twig = service('twig');
 if (! $twig instanceof Twig) {
     throw new RuntimeException('The framework did not discover the adapter service.');
